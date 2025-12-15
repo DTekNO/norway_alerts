@@ -44,11 +44,15 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Varsom Alerts sensor from a config entry."""
-    county_id = entry.data.get(CONF_COUNTY_ID)
-    county_name = entry.data.get(CONF_COUNTY_NAME, "Unknown")
-    warning_type = entry.data.get(CONF_WARNING_TYPE)
-    lang = entry.data.get(CONF_LANG, "en")
-    municipality_filter = entry.data.get(CONF_MUNICIPALITY_FILTER, "")
+    # Get config from entry.options (preferred) or entry.data (fallback)
+    # Options are used when user updates config, data is from initial setup
+    config = entry.options if entry.options else entry.data
+    
+    county_id = config.get(CONF_COUNTY_ID) or entry.data.get(CONF_COUNTY_ID)
+    county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
+    warning_type = config.get(CONF_WARNING_TYPE) or entry.data.get(CONF_WARNING_TYPE)
+    lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, "en")
+    municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
     
     coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang)
     await coordinator.async_config_entry_first_refresh()
@@ -155,20 +159,39 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
     def _filter_alerts(self, alerts):
         """Filter alerts by municipality if filter is set."""
         if not self._municipality_filter:
+            _LOGGER.debug("No municipality filter set, returning all %d alerts", len(alerts))
             return alerts
+        
+        _LOGGER.info("Filtering %d alerts with municipality filter: '%s'", len(alerts), self._municipality_filter)
         
         # Split filter by comma for multiple municipalities
         filter_terms = [term.strip().lower() for term in self._municipality_filter.split(",")]
+        _LOGGER.debug("Filter terms: %s", filter_terms)
         
         filtered = []
         for alert in alerts:
             municipalities = alert.get("MunicipalityList", [])
             muni_names = [m.get("Name", "").lower() for m in municipalities]
             
+            _LOGGER.debug("Checking alert ID %s with municipalities: %s", alert.get("Id"), muni_names)
+            
             # Check if any municipality matches any filter term
-            if any(any(filter_term in muni_name for muni_name in muni_names) for filter_term in filter_terms):
+            matches = False
+            for filter_term in filter_terms:
+                for muni_name in muni_names:
+                    if filter_term in muni_name:
+                        matches = True
+                        _LOGGER.debug("  -> MATCH: '%s' in '%s'", filter_term, muni_name)
+                        break
+                if matches:
+                    break
+            
+            if matches:
                 filtered.append(alert)
+            else:
+                _LOGGER.debug("  -> NO MATCH for alert ID %s", alert.get("Id"))
         
+        _LOGGER.info("Filtered to %d alerts matching '%s'", len(filtered), self._municipality_filter)
         return filtered
 
     @property
