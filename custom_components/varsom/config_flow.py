@@ -117,6 +117,7 @@ class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }),
                 vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(["no", "en"]),
                 vol.Optional(CONF_MUNICIPALITY_FILTER, default=""): cv.string,
+                vol.Optional(CONF_TEST_MODE, default=False): cv.boolean,
             }
         )
 
