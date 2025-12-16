@@ -1,11 +1,14 @@
 {
   "domain": "varsom",
   "name": "Varsom Alerts",
-  "version": "1.0.0",
-  "documentation": "https://github.com/jm-cook/no.varsom",
-  "requirements": ["aiohttp"],
-  "dependencies": [],
-  "codeowners": ["@jm-cook"],
+  "codeowners": [
+    "@jm-cook"
+  ],
   "config_flow": true,
-  "iot_class": "cloud_polling"
+  "documentation": "https://github.com/jm-cook/no.varsom",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/jm-cook/no.varsom/issues",
+  "requirements": [],
+  "version": "1.0.0"
 }

@@ -1,6 +1,10 @@
 # Varsom Alerts - Home Assistant Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/jm-cook/no.varsom)
+[![Validate with HACS](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml)
+[![Hassfest](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml)
+[![GitHub Release](https://img.shields.io/github/release/jm-cook/no.varsom.svg)](https://github.com/jm-cook/no.varsom/releases)
+![Project Maintenance](https://img.shields.io/maintenance/yes/2025.svg)
 
 A Home Assistant custom integration that provides landslide and flood warnings from NVE (Norwegian Water Resources and Energy Directorate) via the Varsom.no API.
 
