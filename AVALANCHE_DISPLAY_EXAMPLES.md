@@ -2,6 +2,8 @@
 
 This document shows how to display the rich avalanche-specific attributes in Home Assistant cards and templates, which differs significantly from the simple landslide/flood warning displays.
 
+**Note**: Each alert includes an `entity_picture` attribute with the official Yr.no warning icon that matches the danger level and warning type. These can be displayed in templates using `<img>` tags.
+
 ## Simple Display Template
 
 For a basic avalanche warning card:
@@ -9,7 +11,7 @@ For a basic avalanche warning card:
 ```yaml
 type: markdown
 content: >
-  ## 🏔️ Avalanche Warning: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  ## <img src="{{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].entity_picture }}" width="24" height="24"> {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
   
   **Danger Level:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}  
   **Valid:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_from | as_timestamp | timestamp_custom('%d/%m %H:%M') }} - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_to | as_timestamp | timestamp_custom('%d/%m %H:%M') }}
@@ -26,6 +28,19 @@ content: >
   *Issued by: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].forecaster }}*
 ```
 
+### Alternative: Using Emoji Instead of Icons
+
+If you prefer emoji over the official warning icons:
+
+```yaml
+type: markdown
+content: >
+  ## 🏔️ Avalanche Warning: {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].region_name }}
+  
+  **Danger Level:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].danger_level_name }}  
+  **Valid:** {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_from | as_timestamp | timestamp_custom('%d/%m %H:%M') }} - {{ states.sensor.varsom_avalanche_vestland.attributes.alerts[0].valid_to | as_timestamp | timestamp_custom('%d/%m %H:%M') }}
+```
+
 ## Detailed Display Template
 
 For a comprehensive avalanche information display:
@@ -36,7 +51,7 @@ content: >
   # 🏔️ Avalanche Warnings - Vestland
   
   {% for alert in states.sensor.varsom_avalanche_vestland.attributes.alerts %}
-  ## {{ alert.region_name }}
+  ## <img src="{{ alert.entity_picture }}" width="32" height="32"> {{ alert.region_name }}
   
   ### {{ alert.danger_level_name }}
   

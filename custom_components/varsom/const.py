@@ -18,7 +18,22 @@ CONF_WARNING_TYPE = "warning_type"
 CONF_MUNICIPALITY_FILTER = "municipality_filter"
 CONF_USE_LOCATION = "use_location"
 CONF_TEST_MODE = "test_mode"
+CONF_ENABLE_NOTIFICATIONS = "enable_notifications"
+CONF_NOTIFICATION_SEVERITY = "notification_severity"
 PLATFORMS = ["sensor"]
+
+# Notification settings
+NOTIFICATION_SEVERITY_ALL = "all"
+NOTIFICATION_SEVERITY_YELLOW_PLUS = "yellow_plus"
+NOTIFICATION_SEVERITY_ORANGE_PLUS = "orange_plus"
+NOTIFICATION_SEVERITY_RED_ONLY = "red_only"
+
+NOTIFICATION_SEVERITIES = {
+    NOTIFICATION_SEVERITY_ALL: "All warnings",
+    NOTIFICATION_SEVERITY_YELLOW_PLUS: "Yellow and above",
+    NOTIFICATION_SEVERITY_ORANGE_PLUS: "Orange and above",
+    NOTIFICATION_SEVERITY_RED_ONLY: "Red warnings only",
+}
 
 # NVE API Base URLs
 API_BASE_LANDSLIDE = "https://api01.nve.no/hydrology/forecast/landslide/v1.0.10/api"

@@ -21,6 +21,8 @@ from .const import (
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
     CONF_TEST_MODE,
+    CONF_ENABLE_NOTIFICATIONS,
+    CONF_NOTIFICATION_SEVERITY,
     API_BASE_LANDSLIDE,
     API_BASE_AVALANCHE,
     COUNTIES,
@@ -29,6 +31,8 @@ from .const import (
     WARNING_TYPE_AVALANCHE,
     WARNING_TYPE_BOTH,
     WARNING_TYPE_ALL,
+    NOTIFICATION_SEVERITIES,
+    NOTIFICATION_SEVERITY_YELLOW_PLUS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -125,6 +129,8 @@ class VarsomConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(["no", "en"]),
                 vol.Optional(CONF_MUNICIPALITY_FILTER, default=""): cv.string,
                 vol.Optional(CONF_TEST_MODE, default=False): cv.boolean,
+                vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=False): cv.boolean,
+                vol.Optional(CONF_NOTIFICATION_SEVERITY, default=NOTIFICATION_SEVERITY_YELLOW_PLUS): vol.In(NOTIFICATION_SEVERITIES),
             }
         )
 
@@ -186,6 +192,12 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
         current_test_mode = self.config_entry.options.get(
             CONF_TEST_MODE, self.config_entry.data.get(CONF_TEST_MODE, False)
         )
+        current_enable_notifications = self.config_entry.options.get(
+            CONF_ENABLE_NOTIFICATIONS, self.config_entry.data.get(CONF_ENABLE_NOTIFICATIONS, False)
+        )
+        current_notification_severity = self.config_entry.options.get(
+            CONF_NOTIFICATION_SEVERITY, self.config_entry.data.get(CONF_NOTIFICATION_SEVERITY, NOTIFICATION_SEVERITY_YELLOW_PLUS)
+        )
 
         data_schema = vol.Schema(
             {
@@ -202,6 +214,8 @@ class VarsomOptionsFlow(config_entries.OptionsFlow):
                 vol.Optional(CONF_LANG, default=current_lang): vol.In(["no", "en"]),
                 vol.Optional(CONF_MUNICIPALITY_FILTER, default=current_municipality_filter): cv.string,
                 vol.Optional(CONF_TEST_MODE, default=current_test_mode): cv.boolean,
+                vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=current_enable_notifications): cv.boolean,
+                vol.Optional(CONF_NOTIFICATION_SEVERITY, default=current_notification_severity): vol.In(NOTIFICATION_SEVERITIES),
             }
         )
 

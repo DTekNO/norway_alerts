@@ -24,6 +24,8 @@ from .const import (
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
     CONF_TEST_MODE,
+    CONF_ENABLE_NOTIFICATIONS,
+    CONF_NOTIFICATION_SEVERITY,
     WARNING_TYPE_LANDSLIDE,
     WARNING_TYPE_FLOOD,
     WARNING_TYPE_AVALANCHE,
@@ -31,6 +33,10 @@ from .const import (
     WARNING_TYPE_ALL,
     ACTIVITY_LEVEL_NAMES,
     ICON_DATA_URLS,
+    NOTIFICATION_SEVERITY_ALL,
+    NOTIFICATION_SEVERITY_YELLOW_PLUS,
+    NOTIFICATION_SEVERITY_ORANGE_PLUS,
+    NOTIFICATION_SEVERITY_RED_ONLY,
 )
 from .api import WarningAPIFactory
 
@@ -55,8 +61,11 @@ async def async_setup_entry(
     lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, "en")
     municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
     test_mode = config.get(CONF_TEST_MODE, False)
+    enable_notifications = config.get(CONF_ENABLE_NOTIFICATIONS, False)
+    notification_severity = config.get(CONF_NOTIFICATION_SEVERITY, NOTIFICATION_SEVERITY_YELLOW_PLUS)
     
-    coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang, test_mode)
+    coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang, test_mode, 
+                                         enable_notifications, notification_severity)
     await coordinator.async_config_entry_first_refresh()
     
     # Create sensors
@@ -77,7 +86,8 @@ async def async_setup_entry(
 class VarsomAlertsCoordinator(DataUpdateCoordinator):
     """Class to manage fetching Varsom Alerts data."""
 
-    def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False):
+    def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False, 
+                 enable_notifications=False, notification_severity=NOTIFICATION_SEVERITY_YELLOW_PLUS):
         """Initialize coordinator."""
         super().__init__(
             hass,
@@ -90,6 +100,9 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
         self.warning_type = warning_type
         self.lang = lang
         self.test_mode = test_mode
+        self.enable_notifications = enable_notifications
+        self.notification_severity = notification_severity
+        self.previous_alerts = {}  # Track previous alerts for change detection
 
     # Old _fetch_warnings method removed - replaced by API classes
 
@@ -192,10 +205,152 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                 warning_types_count[wtype] = warning_types_count.get(wtype, 0) + 1
             _LOGGER.info("Warning types breakdown: %s", warning_types_count)
             
+            # Send notifications if enabled
+            if self.enable_notifications:
+                await self._send_notifications(all_warnings)
+            
             return all_warnings
             
         except Exception as err:
             raise UpdateFailed(f"Error fetching data: {err}")
+
+    async def _send_notifications(self, current_alerts):
+        """Send notifications for new or changed alerts."""
+        try:
+            # Create a dictionary of current alerts by ID and activity level
+            current_alert_states = {}
+            for alert in current_alerts:
+                alert_id = str(alert.get("Id", "unknown"))
+                activity_level = str(alert.get("ActivityLevel", "1"))
+                warning_type = alert.get("_warning_type", "unknown")
+                region_name = alert.get("RegionName") or alert.get("MunicipalityName", "Unknown area")
+                current_alert_states[alert_id] = {
+                    "activity_level": activity_level,
+                    "warning_type": warning_type,
+                    "region_name": region_name,
+                    "alert": alert
+                }
+            
+            # Check for new or upgraded alerts
+            notifications_sent = []
+            
+            for alert_id, alert_info in current_alert_states.items():
+                activity_level = alert_info["activity_level"]
+                warning_type = alert_info["warning_type"]
+                region_name = alert_info["region_name"]
+                alert = alert_info["alert"]
+                
+                # Check if this alert meets notification severity threshold
+                if not self._should_notify(activity_level):
+                    continue
+                
+                # Check if this is a new alert or severity increase
+                previous_alert = self.previous_alerts.get(alert_id)
+                
+                if previous_alert is None:
+                    # New alert
+                    await self._send_alert_notification(alert, "New", warning_type, region_name, activity_level)
+                    notifications_sent.append(f"New {warning_type} alert: {region_name}")
+                    
+                elif int(activity_level) > int(previous_alert["activity_level"]):
+                    # Severity increased
+                    await self._send_alert_notification(alert, "Upgraded", warning_type, region_name, activity_level)
+                    notifications_sent.append(f"Upgraded {warning_type} alert: {region_name}")
+            
+            # Check for resolved alerts (present in previous but not current)
+            for prev_alert_id, prev_alert_info in self.previous_alerts.items():
+                if prev_alert_id not in current_alert_states:
+                    # Alert resolved
+                    prev_warning_type = prev_alert_info["warning_type"]
+                    prev_region_name = prev_alert_info["region_name"]
+                    await self._send_resolved_notification(prev_warning_type, prev_region_name)
+                    notifications_sent.append(f"Resolved {prev_warning_type} alert: {prev_region_name}")
+            
+            # Update previous alerts state
+            self.previous_alerts = current_alert_states.copy()
+            
+            if notifications_sent:
+                _LOGGER.info("Sent %d notifications: %s", len(notifications_sent), notifications_sent)
+                
+        except Exception as err:
+            _LOGGER.error("Error sending notifications: %s", err)
+
+    def _should_notify(self, activity_level: str) -> bool:
+        """Check if this activity level should trigger a notification."""
+        try:
+            level_int = int(activity_level)
+            
+            if self.notification_severity == NOTIFICATION_SEVERITY_ALL:
+                return level_int >= 1
+            elif self.notification_severity == NOTIFICATION_SEVERITY_YELLOW_PLUS:
+                return level_int >= 2
+            elif self.notification_severity == NOTIFICATION_SEVERITY_ORANGE_PLUS:
+                return level_int >= 3  
+            elif self.notification_severity == NOTIFICATION_SEVERITY_RED_ONLY:
+                return level_int >= 4
+            
+            return False
+        except (ValueError, TypeError):
+            return False
+
+    async def _send_alert_notification(self, alert, status, warning_type, region_name, activity_level):
+        """Send a notification for a new or upgraded alert."""
+        try:
+            # Get activity level name and emoji
+            level_name = ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown")
+            level_emoji = {"1": "🟢", "2": "🟡", "3": "🟠", "4": "🔴", "5": "⚫"}.get(activity_level, "⚪")
+            
+            # Format warning type nicely
+            warning_type_display = warning_type.replace("_", " ").title()
+            
+            # Create notification title and message
+            title = f"{level_emoji} {status} {warning_type_display} Warning"
+            
+            main_text = alert.get("MainText", "")
+            if len(main_text) > 100:
+                main_text = main_text[:97] + "..."
+            
+            message = f"{region_name} - {level_name.title()} danger level"
+            if main_text:
+                message += f"\n\n{main_text}"
+            
+            # Send persistent notification to Home Assistant
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": title,
+                    "message": message,
+                    "notification_id": f"varsom_{self.county_id}_{warning_type}_{alert.get('Id', 'unknown')}",
+                },
+                blocking=False,
+            )
+            
+        except Exception as err:
+            _LOGGER.error("Error sending alert notification: %s", err)
+
+    async def _send_resolved_notification(self, warning_type, region_name):
+        """Send a notification for a resolved alert."""
+        try:
+            warning_type_display = warning_type.replace("_", " ").title()
+            
+            title = f"✅ Resolved {warning_type_display} Warning"
+            message = f"{region_name} - Warning no longer active"
+            
+            # Send persistent notification
+            await self.hass.services.async_call(
+                "persistent_notification",
+                "create",
+                {
+                    "title": title,
+                    "message": message,
+                    "notification_id": f"varsom_resolved_{self.county_id}_{warning_type}_{region_name}",
+                },
+                blocking=False,
+            )
+            
+        except Exception as err:
+            _LOGGER.error("Error sending resolved notification: %s", err)
 
 
 class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
