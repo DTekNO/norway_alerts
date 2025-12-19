@@ -89,7 +89,11 @@ class LandslideAPI(CountyBasedAPI):
     
     async def fetch_warnings(self) -> List[Dict[str, Any]]:
         """Fetch landslide warnings from NVE API."""
-        return await self._fetch_county_warnings(API_BASE_LANDSLIDE, "landslide")
+        warnings = await self._fetch_county_warnings(API_BASE_LANDSLIDE, "landslide")
+        # Add warning type to each warning
+        for warning in warnings:
+            warning["_warning_type"] = "landslide"
+        return warnings
 
 
 class FloodAPI(CountyBasedAPI):
@@ -100,7 +104,11 @@ class FloodAPI(CountyBasedAPI):
     
     async def fetch_warnings(self) -> List[Dict[str, Any]]:
         """Fetch flood warnings from NVE API."""
-        return await self._fetch_county_warnings(API_BASE_FLOOD, "flood")
+        warnings = await self._fetch_county_warnings(API_BASE_FLOOD, "flood")
+        # Add warning type to each warning
+        for warning in warnings:
+            warning["_warning_type"] = "flood"
+        return warnings
 
 
 class AvalancheAPI(BaseWarningAPI):
@@ -188,6 +196,7 @@ class AvalancheAPI(BaseWarningAPI):
                                                         "MunicipalityList": warning.get("MunicipalityList", []),
                                                         "_region_id": warning.get("RegionId"),
                                                         "_region_name": warning.get("RegionName"),
+                                                        "_warning_type": "avalanche",
                                                         "UtmZone": warning.get("UtmZone"),
                                                         "UtmEast": warning.get("UtmEast"),
                                                         "UtmNorth": warning.get("UtmNorth"),
