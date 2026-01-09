@@ -1,9 +1,9 @@
-# Varsom Alerts - Home Assistant Integration
+# Norway Alerts - Home Assistant Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/jm-cook/no.varsom)
-[![Validate with HACS](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml)
-[![Hassfest](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml)
-[![GitHub Release](https://img.shields.io/github/release/jm-cook/no.varsom.svg)](https://github.com/jm-cook/no.varsom/releases)
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/jm-cook/norway_alerts)
+[![Validate with HACS](https://github.com/jm-cook/norway_alerts/actions/workflows/validate.yaml/badge.svg)](https://github.com/jm-cook/norway_alerts/actions/workflows/validate.yaml)
+[![Hassfest](https://github.com/jm-cook/norway_alerts/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/jm-cook/norway_alerts/actions/workflows/hassfest.yaml)
+[![GitHub Release](https://img.shields.io/github/release/jm-cook/norway_alerts.svg)](https://github.com/jm-cook/norway_alerts/releases)
 ![Project Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
 
 A comprehensive Home Assistant custom integration that provides Norwegian weather and geohazard warnings from multiple official sources:
@@ -70,7 +70,7 @@ All warnings unified in a clean, modern Home Assistant interface with automatic 
 3. **Add Integration**
    - Go to **Settings** → **Devices & Services**
    - Click **"+ Add Integration"**
-   - Search for "Varsom Alerts"
+   - Search for "Norway Alerts"
    - Follow the configuration steps below
 
 ### Method 2: Manual Installation
@@ -86,7 +86,7 @@ All warnings unified in a clean, modern Home Assistant interface with automatic 
 3. **Add Integration**
    - Go to **Settings** → **Devices & Services**
    - Click **"+ Add Integration"**
-   - Search for "Varsom Alerts"
+   - Search for "Norway Alerts"
 
 ---
 
@@ -386,7 +386,7 @@ content: |
 
 ```yaml
 automation:
-  - alias: "Varsom Yellow Alert Notification"
+  - alias: "Yellow Alert Notification"
     trigger:
       - platform: numeric_state
         entity_id: sensor.norway_alerts_landslide_vestland
@@ -399,7 +399,7 @@ automation:
             {{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].main_text }}
           data:
             url: "{{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].url }}"
-            tag: "varsom_alert"
+            tag: "norway_alert"
             importance: high
 ```
 
@@ -407,7 +407,7 @@ automation:
 
 ```yaml
 automation:
-  - alias: "Varsom Red Alert - Emergency"
+  - alias: "Red Alert - Emergency"
     trigger:
       - platform: numeric_state
         entity_id: sensor.norway_alerts_landslide_vestland
@@ -456,7 +456,7 @@ template:
 ```yaml
 template:
   - sensor:
-      - name: "All Varsom Alerts"
+      - name: "All Norway Alerts"
         state: >
           {% set landslide = states('sensor.norway_alerts_landslide_vestland') | int %}
           {% set flood = states('sensor.norway_alerts_flood_vestland') | int %}
@@ -475,10 +475,10 @@ template:
 
 ### Integration Not Found
 
-**Problem**: "Varsom Alerts" doesn't appear in the integration list
+**Problem**: "Norway Alerts" doesn't appear in the integration list
 
 **Solutions**:
-1. Ensure files are in `/config/custom_components/varsom/`
+1. Ensure files are in `/config/custom_components/norway_alerts/`
 2. Check file permissions (readable by Home Assistant)
 3. Restart Home Assistant completely
 4. Check logs: **Settings** → **System** → **Logs**
