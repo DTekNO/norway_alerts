@@ -21,6 +21,8 @@ from .const import (
     CONF_LANG,
     CONF_COUNTY_ID,
     CONF_COUNTY_NAME,
+    CONF_LATITUDE,
+    CONF_LONGITUDE,
     CONF_WARNING_TYPE,
     CONF_MUNICIPALITY_FILTER,
     CONF_TEST_MODE,
@@ -29,8 +31,7 @@ from .const import (
     WARNING_TYPE_LANDSLIDE,
     WARNING_TYPE_FLOOD,
     WARNING_TYPE_AVALANCHE,
-    WARNING_TYPE_BOTH,
-    WARNING_TYPE_ALL,
+    WARNING_TYPE_METALERTS,
     ACTIVITY_LEVEL_NAMES,
     ICON_DATA_URLS,
     NOTIFICATION_SEVERITY_ALL,
@@ -55,30 +56,54 @@ async def async_setup_entry(
     # Options are used when user updates config, data is from initial setup
     config = entry.options if entry.options else entry.data
     
-    county_id = config.get(CONF_COUNTY_ID) or entry.data.get(CONF_COUNTY_ID)
-    county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
     warning_type = config.get(CONF_WARNING_TYPE) or entry.data.get(CONF_WARNING_TYPE)
     lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, "en")
-    municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
     test_mode = config.get(CONF_TEST_MODE, False)
     enable_notifications = config.get(CONF_ENABLE_NOTIFICATIONS, False)
     notification_severity = config.get(CONF_NOTIFICATION_SEVERITY, NOTIFICATION_SEVERITY_YELLOW_PLUS)
     
-    coordinator = VarsomAlertsCoordinator(hass, county_id, county_name, warning_type, lang, test_mode, 
-                                         enable_notifications, notification_severity)
-    await coordinator.async_config_entry_first_refresh()
+    # Determine if this is a county-based or lat/lon-based configuration
+    county_id = config.get(CONF_COUNTY_ID) or entry.data.get(CONF_COUNTY_ID)
+    latitude = config.get(CONF_LATITUDE) or entry.data.get(CONF_LATITUDE)
+    longitude = config.get(CONF_LONGITUDE) or entry.data.get(CONF_LONGITUDE)
     
-    # Create sensors
-    entities = [
-        # Main sensor with all county alerts
-        VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=True),
-    ]
-    
-    # If municipality filter is set, create an additional "My Area" sensor
-    if municipality_filter:
-        entities.append(
-            VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=False)
+    if county_id:
+        # County-based configuration (NVE warnings)
+        county_name = config.get(CONF_COUNTY_NAME) or entry.data.get(CONF_COUNTY_NAME, "Unknown")
+        municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
+        
+        coordinator = VarsomAlertsCoordinator(
+            hass, county_id, county_name, warning_type, lang, test_mode,
+            enable_notifications, notification_severity,
+            latitude=None, longitude=None
         )
+        await coordinator.async_config_entry_first_refresh()
+        
+        # Create sensors
+        entities = [
+            # Main sensor with all county alerts
+            VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=True),
+        ]
+        
+        # If municipality filter is set, create an additional "My Area" sensor
+        if municipality_filter:
+            entities.append(
+                VarsomAlertsSensor(coordinator, entry.entry_id, county_name, warning_type, municipality_filter, is_main=False)
+            )
+    else:
+        # Lat/lon-based configuration (Met.no metalerts)
+        coordinator = VarsomAlertsCoordinator(
+            hass, None, None, warning_type, lang, test_mode,
+            enable_notifications, notification_severity,
+            latitude=latitude, longitude=longitude
+        )
+        await coordinator.async_config_entry_first_refresh()
+        
+        # Create a single sensor for metalerts
+        location_name = f"Location {latitude:.2f}, {longitude:.2f}"
+        entities = [
+            VarsomAlertsSensor(coordinator, entry.entry_id, location_name, warning_type, "", is_main=True),
+        ]
     
     async_add_entities(entities)
 
@@ -87,7 +112,8 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
     """Class to manage fetching Varsom Alerts data."""
 
     def __init__(self, hass, county_id, county_name, warning_type, lang, test_mode=False, 
-                 enable_notifications=False, notification_severity=NOTIFICATION_SEVERITY_YELLOW_PLUS):
+                 enable_notifications=False, notification_severity=NOTIFICATION_SEVERITY_YELLOW_PLUS,
+                 latitude=None, longitude=None):
         """Initialize coordinator."""
         super().__init__(
             hass,
@@ -102,6 +128,8 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
         self.test_mode = test_mode
         self.enable_notifications = enable_notifications
         self.notification_severity = notification_severity
+        self.latitude = latitude
+        self.longitude = longitude
         self.previous_alerts = {}  # Track previous alerts for change detection
 
     # Old _fetch_warnings method removed - replaced by API classes
@@ -116,29 +144,30 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
             # Inject test alert if test mode is enabled
             if self.test_mode:
                 # Determine primary warning type for test alert
-                test_warning_type = "landslide"  # default
-                if self.warning_type == WARNING_TYPE_FLOOD:
-                    test_warning_type = "flood"
-                elif self.warning_type == WARNING_TYPE_AVALANCHE:
-                    test_warning_type = "avalanche"
-                elif self.warning_type in [WARNING_TYPE_BOTH, WARNING_TYPE_ALL]:
-                    test_warning_type = "landslide"  # use landslide for combined types
+                test_warning_type = self.warning_type  # Use configured type directly
                 
                 # Create warning type specific content
-                if test_warning_type == "flood":
+                if test_warning_type == WARNING_TYPE_FLOOD:
                     danger_type_name = "Flom"
                     main_text = "Test Alert - Orange Flood Warning for Testville"
                     warning_text = "Det er moderat fare for flom i Testville kommune. Nedbør og snøsmelting kan føre til oversvømmelse."
                     advice_text = "Unngå opphold i flomfarlige områder. Vær særlig oppmerksom ved ferdsel nær bekker og elver."
                     consequence_text = "Flom kan medføre skade på bygninger og infrastruktur. Veier kan bli stengt på grunn av flom."
                     emergency_text = "Test emergency warning text for Testville flood alert"
-                elif test_warning_type == "avalanche":
+                elif test_warning_type == WARNING_TYPE_AVALANCHE:
                     danger_type_name = "Skredfare" 
                     main_text = "Test Alert - Orange Avalanche Warning for Testville"
                     warning_text = "Det er moderat fare for snøskred i Testville kommune. Værforhold kan utløse skred i bratte områder."
                     advice_text = "Unngå skredfarlige områder. Vær særlig forsiktig i bratt terreng over tregrensen."
                     consequence_text = "Snøskred kan medføre alvorlig fare for liv og helse. Transportruter kan bli stengt."
                     emergency_text = "Test emergency warning text for Testville avalanche alert"
+                elif test_warning_type == WARNING_TYPE_METALERTS:
+                    danger_type_name = "Uvær"
+                    main_text = "Test Alert - Orange Weather Warning"
+                    warning_text = "Det er moderat fare for uvær i området. Kraftig vind og nedbør kan påvirke aktiviteter utendørs."
+                    advice_text = "Vær forberedt på vanskelige værforhold. Følg med på værmeldinger."
+                    consequence_text = "Uvær kan medføre fare for trafikk og utendørsaktiviteter."
+                    emergency_text = "Test emergency warning text for weather alert"
                 else:  # landslide
                     danger_type_name = "Jordskred"
                     main_text = "Test Alert - Orange Landslide Warning for Testville"
@@ -178,23 +207,20 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                 all_warnings.append(test_alert)
                 _LOGGER.info("Test mode: Injected fake orange %s alert for Testville", test_warning_type)
             
-            # Use API factory to get appropriate API clients and fetch warnings
-            api_factory = WarningAPIFactory(self.county_id, self.county_name, self.lang)
+            # Use API factory to get appropriate API client and fetch warnings
+            api_factory = WarningAPIFactory(
+                self.county_id, 
+                self.county_name, 
+                self.lang,
+                latitude=self.latitude,
+                longitude=self.longitude
+            )
             
-            # Fetch warnings based on warning type
-            warning_types_to_fetch = []
-            if self.warning_type in [WARNING_TYPE_LANDSLIDE, WARNING_TYPE_BOTH, WARNING_TYPE_ALL]:
-                warning_types_to_fetch.append("landslide")
-            if self.warning_type in [WARNING_TYPE_FLOOD, WARNING_TYPE_BOTH, WARNING_TYPE_ALL]:
-                warning_types_to_fetch.append("flood")
-            if self.warning_type in [WARNING_TYPE_AVALANCHE, WARNING_TYPE_ALL]:
-                warning_types_to_fetch.append("avalanche")
-            
-            for warning_type in warning_types_to_fetch:
-                api_client = api_factory.get_api(warning_type)
-                warnings = await api_client.fetch_warnings()
-                all_warnings.extend(warnings)
-                _LOGGER.info("Fetched %d %s warnings", len(warnings), warning_type)
+            # Fetch warnings for the configured warning type
+            api_client = api_factory.get_api(self.warning_type)
+            warnings = await api_client.fetch_warnings()
+            all_warnings.extend(warnings)
+            _LOGGER.info("Fetched %d %s warnings", len(warnings), self.warning_type)
             
             _LOGGER.info("Total warnings fetched: %d", len(all_warnings))
             

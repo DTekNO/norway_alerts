@@ -11,7 +11,8 @@ import aiohttp
 from .const import (
     API_BASE_LANDSLIDE, 
     API_BASE_FLOOD, 
-    API_BASE_AVALANCHE
+    API_BASE_AVALANCHE,
+    API_BASE_METALERTS
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -269,12 +270,176 @@ class AvalancheAPI(BaseWarningAPI):
             return []
 
 
+# MetAlerts API (originally authored by @kutern84 and @svenove for met_alerts integration)
+# Adapted for inclusion in the Varsom integration to unify Norwegian geohazard services
+# Original source: https://github.com/kurtern84/met_alerts
+# License: MIT (see original repository)
+class MetAlertsAPI(BaseWarningAPI):
+    """API client for Met.no weather alerts (metalerts).
+    
+    Original implementation by @kutern84 and @svenove in the met_alerts integration.
+    This is an adapted version to integrate metalerts into the Varsom integration,
+    unifying all Norwegian geohazard services.
+    """
+    
+    def __init__(self, latitude: float, longitude: float, lang: str = "en"):
+        """Initialize the MetAlerts API client.
+        
+        Note: MetAlerts uses lat/lon instead of county_id, so we store these separately.
+        """
+        # Call parent with dummy county values since metalerts doesn't use counties
+        super().__init__("", "", lang)
+        self.latitude = latitude
+        self.longitude = longitude
+    
+    def _get_warning_type(self) -> str:
+        return "metalerts"
+    
+    def _extract_times_from_title(self, title: str) -> tuple[str, str | None, str | None]:
+        """Extract timestamps from alert title.
+        
+        Original implementation from met_alerts integration by @kutern84 and @svenove.
+        """
+        import re
+        timestamps = re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+\d{2}:\d{2}", title)
+        
+        if len(timestamps) >= 2:
+            starttime = timestamps[0]
+            endtime = timestamps[1]
+            # Remove the timestamps from the title
+            title = title.replace(starttime, "").replace(endtime, "").strip(", ").strip()
+            return title, starttime, endtime
+        else:
+            return title, None, None
+    
+    async def fetch_warnings(self) -> List[Dict[str, Any]]:
+        """Fetch weather alerts from Met.no metalerts API.
+        
+        Implementation adapted from met_alerts integration by @kutern84 and @svenove.
+        Returns alerts converted to the common Varsom warning format.
+        """
+        url = f"{API_BASE_METALERTS}/current.json?lat={self.latitude}&lon={self.longitude}&lang={self.lang}"
+        
+        headers = {
+            "Accept": "application/json",
+            "User-Agent": "varsom/1.0.0 jeremy.m.cook@gmail.com"
+        }
+        
+        _LOGGER.debug("Fetching metalerts from: %s", url)
+        
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with asyncio.timeout(10):
+                    async with session.get(url, headers=headers) as response:
+                        if response.status != 200:
+                            _LOGGER.error("Error fetching metalerts data: %s", response.status)
+                            return []
+                        
+                        content_type = response.headers.get("Content-Type", "")
+                        if "application/json" not in content_type:
+                            _LOGGER.error("Unexpected content type for metalerts: %s", content_type)
+                            return []
+                        
+                        json_data = await response.json()
+                        if not json_data:
+                            _LOGGER.info("No metalerts found")
+                            return []
+                        
+                        features = json_data.get("features", [])
+                        _LOGGER.info("Successfully fetched %d metalerts", len(features))
+                        
+                        # Convert metalerts format to Varsom warning format
+                        warnings = []
+                        for feature in features:
+                            props = feature.get("properties", {})
+                            
+                            # Extract basic information
+                            title, starttime, endtime = self._extract_times_from_title(props.get("title", ""))
+                            
+                            # Parse awareness_level (format: "2; orange; Moderate")
+                            awareness_level = props.get("awareness_level", "")
+                            try:
+                                awareness_level_numeric, awareness_level_color, awareness_level_name = awareness_level.split("; ")
+                                activity_level = awareness_level_numeric
+                            except ValueError:
+                                awareness_level_numeric = "1"
+                                awareness_level_color = "yellow"
+                                awareness_level_name = "Minor"
+                                activity_level = "1"
+                            
+                            # Get resource URL
+                            resources = props.get("resources", [])
+                            resource_url = ""
+                            map_url = None
+                            if resources and len(resources) > 0:
+                                resource_url = resources[0].get("uri", "")
+                                # Extract PNG map URL
+                                for resource in resources:
+                                    if resource.get("mimeType") == "image/png":
+                                        map_url = resource.get("uri")
+                                        break
+                            
+                            # Convert to Varsom warning format
+                            converted_warning = {
+                                "Id": props.get("id", ""),
+                                "ActivityLevel": activity_level,
+                                "DangerLevel": f"Level {activity_level}",
+                                "DangerTypeName": props.get("event", "Weather warning"),
+                                "MainText": props.get("description", ""),
+                                "RegionName": props.get("area", ""),
+                                "ValidFrom": starttime or props.get("eventEndingTime", ""),
+                                "ValidTo": endtime or props.get("eventEndingTime", ""),
+                                "PublishTime": "",  # Not provided by metalerts
+                                "_warning_type": "metalerts",
+                                
+                                # Metalerts-specific attributes (preserving original structure)
+                                "title": title,
+                                "starttime": starttime,
+                                "endtime": endtime,
+                                "description": props.get("description", ""),
+                                "awareness_level": awareness_level,
+                                "awareness_level_numeric": awareness_level_numeric,
+                                "awareness_level_color": awareness_level_color,
+                                "awareness_level_name": awareness_level_name,
+                                "certainty": props.get("certainty", ""),
+                                "severity": props.get("severity", ""),
+                                "instruction": props.get("instruction", ""),
+                                "contact": props.get("contact", ""),
+                                "resources": resources,
+                                "area": props.get("area", ""),
+                                "event": props.get("event", ""),
+                                "event_awareness_name": props.get("eventAwarenessName", ""),
+                                "consequences": props.get("consequences", ""),
+                                "map_url": map_url,
+                                "resource_url": resource_url,
+                                "awareness_type": props.get("awareness_type", ""),
+                                "ceiling": props.get("ceiling"),
+                                "county": props.get("county", []),
+                                "geographic_domain": props.get("geographicDomain", ""),
+                                "risk_matrix_color": props.get("riskMatrixColor", ""),
+                                "trigger_level": props.get("triggerLevel"),
+                                "web": props.get("web", ""),
+                            }
+                            warnings.append(converted_warning)
+                        
+                        return warnings
+        
+        except aiohttp.ClientError as err:
+            _LOGGER.error("Error fetching metalerts: %s", err)
+            return []
+        except Exception as err:
+            _LOGGER.error("Unexpected error fetching metalerts: %s", err)
+            return []
+
+
 class WarningAPIFactory:
     """Factory for creating warning API clients."""
     
-    def __init__(self, county_id: str, county_name: str, lang: str = "en"):
+    def __init__(self, county_id: str = "", county_name: str = "", latitude: float = None, longitude: float = None, lang: str = "en"):
         self.county_id = county_id
         self.county_name = county_name
+        self.latitude = latitude
+        self.longitude = longitude
         self.lang = lang
     
     def get_api(self, warning_type: str) -> BaseWarningAPI:
@@ -285,11 +450,15 @@ class WarningAPIFactory:
             return FloodAPI(self.county_id, self.county_name, self.lang)
         elif warning_type == "avalanche":
             return AvalancheAPI(self.county_id, self.county_name, self.lang)
+        elif warning_type == "metalerts":
+            if self.latitude is None or self.longitude is None:
+                raise ValueError("Latitude and longitude are required for metalerts")
+            return MetAlertsAPI(self.latitude, self.longitude, self.lang)
         else:
             raise ValueError(f"Unknown warning type: {warning_type}")
     
     @staticmethod
-    def create_api(warning_type: str, county_id: str, county_name: str, lang: str = "en") -> BaseWarningAPI:
+    def create_api(warning_type: str, county_id: str = "", county_name: str = "", latitude: float = None, longitude: float = None, lang: str = "en") -> BaseWarningAPI:
         """Create appropriate API client for warning type (static method)."""
         if warning_type == "landslide":
             return LandslideAPI(county_id, county_name, lang)
@@ -297,5 +466,9 @@ class WarningAPIFactory:
             return FloodAPI(county_id, county_name, lang)
         elif warning_type == "avalanche":
             return AvalancheAPI(county_id, county_name, lang)
+        elif warning_type == "metalerts":
+            if latitude is None or longitude is None:
+                raise ValueError("Latitude and longitude are required for metalerts")
+            return MetAlertsAPI(latitude, longitude, lang)
         else:
             raise ValueError(f"Unknown warning type: {warning_type}")

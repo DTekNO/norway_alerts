@@ -7,13 +7,15 @@ Yr warning icons are licensed under CC BY 4.0:
   License: https://creativecommons.org/licenses/by/4.0/
 """
 
-DOMAIN = "varsom"
-DEFAULT_NAME = "Varsom Alerts"
+DOMAIN = "norway_alerts"
+DEFAULT_NAME = "Norway Alerts"
 DEFAULT_LANG = "en"
 DEFAULT_WARNING_TYPE = "landslide"
 CONF_LANG = "lang"
 CONF_COUNTY_ID = "county_id"
 CONF_COUNTY_NAME = "county_name"
+CONF_LATITUDE = "latitude"
+CONF_LONGITUDE = "longitude"
 CONF_WARNING_TYPE = "warning_type"
 CONF_MUNICIPALITY_FILTER = "municipality_filter"
 CONF_USE_LOCATION = "use_location"
@@ -40,12 +42,14 @@ API_BASE_LANDSLIDE = "https://api01.nve.no/hydrology/forecast/landslide/v1.0.10/
 API_BASE_FLOOD = "https://api01.nve.no/hydrology/forecast/flood/v1.0.10/api"
 API_BASE_AVALANCHE = "https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0"
 
+# Met.no API Base URL
+API_BASE_METALERTS = "https://api.met.no/weatherapi/metalerts/2.0"
+
 # Warning types
 WARNING_TYPE_LANDSLIDE = "landslide"
 WARNING_TYPE_FLOOD = "flood"
 WARNING_TYPE_AVALANCHE = "avalanche"
-WARNING_TYPE_BOTH = "both"
-WARNING_TYPE_ALL = "all"
+WARNING_TYPE_METALERTS = "metalerts"
 
 # Activity levels
 ACTIVITY_LEVEL_GREEN = "1"

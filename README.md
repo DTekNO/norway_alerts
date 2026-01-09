@@ -4,21 +4,33 @@
 [![Validate with HACS](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/validate.yaml)
 [![Hassfest](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/jm-cook/no.varsom/actions/workflows/hassfest.yaml)
 [![GitHub Release](https://img.shields.io/github/release/jm-cook/no.varsom.svg)](https://github.com/jm-cook/no.varsom/releases)
-![Project Maintenance](https://img.shields.io/maintenance/yes/2025.svg)
+![Project Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
 
-A Home Assistant custom integration that provides landslide and flood warnings from NVE (Norwegian Water Resources and Energy Directorate) via the Varsom.no API.
+A comprehensive Home Assistant custom integration that provides Norwegian weather and geohazard warnings from multiple official sources:
+- **Landslide, Flood, and Avalanche warnings** from NVE (Norwegian Water Resources and Energy Directorate)
+- **Weather alerts** from Met.no (Norwegian Meteorological Institute)
+
+All warnings unified in a clean, modern Home Assistant interface with automatic icon display and rich alert data.
 
 ## Features
 
-- **Single sensor per county** - Clean, modern design with all alerts in attributes
-- **Landslide and flood warnings** - Choose one or both warning types
-- **County-based alerts** - Select your Norwegian county
-- **Activity levels** - Green (1), Yellow (2), Orange (3), Red (4)
-- **Rich alert data** - Includes warning text, advice, consequences, municipalities, and more
-- **Direct links** - Each alert includes a link to Varsom.no with an interactive map
-- **Bilingual** - Support for Norwegian and English
+### Warning Types
+- **Landslide warnings** (NVE/Varsom.no) - Jord- og flomskredfare
+- **Flood warnings** (NVE/Varsom.no) - Flomvarsling  
+- **Avalanche warnings** (NVE/Varsom.no) - Snøskredvarsling
+- **Weather alerts** (Met.no) - Meteorological warnings (wind, rain, snow, etc.)
+
+### Key Features
+- **Flexible configuration** - One sensor per warning type for clean separation
+- **Multiple location types** - County-based (NVE) or coordinates-based (Met.no)
+- **Activity levels** - Green (1), Yellow (2), Orange (3), Red (4), Black (5 for avalanche)
+- **Rich alert data** - Warning text, advice, consequences, affected areas, validity periods
+- **Direct links** - Each alert links to detailed maps and information
+- **Bilingual** - Full Norwegian and English support
 - **Official Yr.no icons** - Embedded warning icons (no setup required)
-- **Municipality filtering** - Optional filtering for specific municipalities within a county
+- **Municipality filtering** - Filter NVE alerts to specific municipalities
+- **Test mode** - Generate fake alerts for testing dashboards and automations
+- **Persistent notifications** - Optional notifications for new or changed alerts
 
 ## Table of Contents
 
@@ -46,12 +58,12 @@ A Home Assistant custom integration that provides landslide and flood warnings f
    - Open HACS in Home Assistant
    - Click the three dots (⋮) in the top right
    - Select "Custom repositories"
-   - Add repository URL: `https://github.com/jm-cook/varsom`
+   - Add repository URL: `https://github.com/jm-cook/norway_alerts`
    - Category: Integration
    - Click "Add"
 
 2. **Install Integration**
-   - Search for "Varsom Alerts" in HACS
+   - Search for "Norway Alerts" in HACS
    - Click "Download"
    - Restart Home Assistant
 
@@ -65,8 +77,8 @@ A Home Assistant custom integration that provides landslide and flood warnings f
 
 1. **Copy Files**
    - Download the latest release
-   - Copy the `custom_components/varsom` folder to your Home Assistant `config/custom_components/` directory
-   - The final path should be: `/config/custom_components/varsom/`
+   - Copy the `custom_components/norway_alerts` folder to your Home Assistant `config/custom_components/` directory
+   - The final path should be: `/config/custom_components/norway_alerts/`
 
 2. **Restart Home Assistant**
    - Go to **Settings** → **System** → **Restart**
@@ -82,74 +94,95 @@ A Home Assistant custom integration that provides landslide and flood warnings f
 
 ### Initial Setup
 
-When adding the integration, you'll be prompted for:
+The integration uses a **two-step configuration flow**:
 
-#### 1. County (Required)
-Select your Norwegian county from the dropdown:
-- Oslo (03)
-- Rogaland (11)
-- Møre og Romsdal (15)
-- Nordland (18)
-- Viken (30)
-- Innlandet (34)
-- Vestfold og Telemark (38)
-- Agder (42)
-- Vestland (46)
-- Trøndelag (50)
-- Troms og Finnmark (54)
+#### Step 1: Warning Type & Settings
 
-#### 2. Warning Type (Required)
-Choose which warnings to monitor:
-- **Landslide**: Monitor landslide warnings only
-- **Flood**: Monitor flood warnings only
-- **Both**: Monitor both types (combined sensor)
+**Warning Type** (Required) - Choose one per sensor:
 
-#### 3. Language (Optional, Default: English)
-Select the language for alert text and Varsom.no links:
-- **English** (en)
-- **Norwegian** (no)
+*Geohazard Warnings (NVE via Varsom.no):*
+- **Landslide** - Debris flows, rockslides, quick clay landslides
+- **Flood** - River flooding, flash floods, groundwater flooding  
+- **Avalanche** - Snow avalanche danger levels
 
-#### 4. Municipality Filter (Optional)
-Filter alerts to specific municipalities within the county:
-- Leave empty to see all alerts in the county
-- Enter municipality name(s) separated by commas
-- Example: `Bergen, Stord` (only shows alerts affecting these municipalities)
-- Creates a second filtered sensor alongside the main sensor
+*Weather Alerts (Met.no):*
+- **Weather Alerts** - Wind, rain, snow, thunderstorms, coastal events, ice
 
-#### 5. Test Mode (Optional, Default: Off)
-Enable test mode to inject fake alerts for testing dashboards and automations when there are no active warnings.
+**Language** (Optional, Default: English)
+- **English** (en) or **Norwegian** (no)
+- Controls alert text language and website links
+
+**Test Mode** (Optional, Default: Off)
+- Enable to inject fake alerts for testing
+- Useful when there are no active warnings
+
+**Enable Notifications** (Optional, Default: Off)
+- Send persistent notifications for new/changed alerts
+- Configure severity threshold for notifications
+
+**Notification Severity** (Optional, Default: Yellow and above)
+- **All warnings** - Notify for all severity levels
+- **Yellow and above** - Skip green (no warning) notifications  
+- **Orange and above** - Only moderate to extreme warnings
+- **Red warnings only** - Only extreme warnings
+
+#### Step 2: Location Configuration
+
+The location fields shown depend on your selected warning type:
+
+**For Geohazard Warnings** (Landslide, Flood, Avalanche):
+- **County** (Required) - Select your Norwegian county:
+  - Oslo (03), Rogaland (11), Møre og Romsdal (15), Nordland (18)
+  - Viken (30), Innlandet (34), Vestfold og Telemark (38)  
+  - Agder (42), Vestland (46), Trøndelag (50), Troms og Finnmark (54)
+- **Municipality Filter** (Optional) - Filter to specific municipalities:
+  - Leave empty for all alerts in the county
+  - Enter names separated by commas: `Bergen, Stord`
+  - Creates a second filtered sensor alongside the main sensor
+
+**For Met.no Weather Alerts**:
+- **Latitude** (Required, defaults to Home Assistant location)
+- **Longitude** (Required, defaults to Home Assistant location)
+- Can be edited to monitor any location in Norway
 
 ### Example Configurations
 
-**Basic - Vestland County Landslide Warnings**
-- County: `Vestland`
+**Example 1: Vestland County Landslide Warnings**
 - Warning Type: `Landslide`
-- Language: `English`
-- Creates: `sensor.varsom_landslide_vestland`
-
-**With Municipality Filter - Bergen Area Only**
 - County: `Vestland`
-- Warning Type: `Both`
+- Language: `English`
+- **Creates**: `sensor.norway_alerts_landslide_vestland`
+
+**Example 2: Bergen Area Flood Warnings (Filtered)**
+- Warning Type: `Flood`
+- County: `Vestland`
 - Municipality Filter: `Bergen, Askøy, Fjell`
-- Creates: 
-  - `sensor.varsom_both_vestland` (all alerts)
-  - `sensor.varsom_both_vestland_filtered` (Bergen area only)
+- **Creates**: 
+  - `sensor.norway_alerts_flood_vestland` (all county alerts)
+  - `sensor.norway_alerts_flood_vestland_filtered` (Bergen area only)
 
-### Multiple Configurations
+**Example 3: Weather Alerts for Oslo**
+- Warning Type: `Weather Alerts`
+- Latitude: `59.9139`
+- Longitude: `10.7522`
+- **Creates**: `sensor.norway_alerts_weather_oslo`
 
-You can add multiple instances for different counties or warning types. Each instance polls independently every 30 minutes.
+**Example 4: Complete Monitoring Setup**
 
-**Example setup:**
-- `sensor.varsom_landslide_vestland`
-- `sensor.varsom_landslide_rogaland`
-- `sensor.varsom_flood_vestland`
-- `sensor.varsom_both_oslo`
+Add the integration **multiple times** to monitor different warning types and locations:
+- `sensor.norway_alerts_landslide_vestland` - Geohazard: landslide warnings
+- `sensor.norway_alerts_flood_vestland` - Geohazard: flood warnings  
+- `sensor.norway_alerts_avalanche_vestland` - Geohazard: avalanche warnings
+- `sensor.norway_alerts_weather_bergen` - Weather alerts for Bergen
+- `sensor.norway_alerts_landslide_oslo` - Geohazard: Oslo landslides
+
+> **Note**: Each configuration creates an independent sensor. This gives you clean separation between warning types with appropriate attributes for each.
 
 ### Reconfiguring
 
 To change settings after initial setup:
 1. Go to **Settings** → **Devices & Services**
-2. Find **Varsom Alerts**
+2. Find **Norway Alerts**
 3. Click the three dots (⋮) → **Configure**
 4. Update your settings and click **Submit**
 
@@ -159,8 +192,9 @@ To change settings after initial setup:
 
 ### State
 
-The sensor state represents the **highest activity level** (1-4) from all active warnings:
+The sensor state represents the **highest activity level** from all active warnings:
 
+#### Geohazard Warnings - Landslide & Flood (NVE)
 | State | Level | Color | Description |
 |-------|-------|-------|-------------|
 | `1` | Green | 🟢 | No warnings / Low danger |
@@ -168,7 +202,26 @@ The sensor state represents the **highest activity level** (1-4) from all active
 | `3` | Orange | 🟠 | Considerable danger |
 | `4` | Red | 🔴 | High/Extreme danger |
 
+#### Geohazard Warnings - Avalanche (NVE)
+| State | Level | Color | Description |
+|-------|-------|-------|-------------|
+| `1` | Green | 🟢 | Low danger |
+| `2` | Yellow | 🟡 | Moderate danger |
+| `3` | Orange | 🟠 | Considerable danger |
+| `4` | Red | 🔴 | High danger |
+| `5` | Black | ⚫ | Extreme danger |
+
+#### Weather Alerts (Met.no)
+| State | Level | Color | Description |
+|-------|-------|-------|-------------|
+| `1` | Green | 🟢 | No warnings |
+| `2` | Yellow | 🟡 | Moderate weather event |
+| `3` | Orange | 🟠 | Severe weather event |
+| `4` | Red | 🔴 | Extreme weather event |
+
 ### Attributes
+
+#### Geohazard Warnings (Landslide, Flood, Avalanche)
 
 ```yaml
 active_alerts: 2
@@ -183,7 +236,7 @@ alerts:
     level: 2
     level_name: "yellow"
     danger_type: "Jord- og flomskredfare"
-    warning_type: "landslide"
+    warning_type: "landslide"  # or "flood" or "avalanche"
     municipalities:
       - "Tysnes"
       - "Bergen"
@@ -197,6 +250,35 @@ alerts:
     advice_text: "Stay informed about weather..."
     consequence_text: "Landslides may occur..."
     url: "https://www.varsom.no/en/flood-and-landslide-warning-service/forecastid/584731"
+```
+
+#### Met.no Weather Alerts
+
+```yaml
+active_alerts: 1
+highest_level: "orange"
+highest_level_numeric: 3
+latitude: 59.9139
+longitude: 10.7522
+alerts:
+  - id: "2.49.0.1.578.0.20250109121500"  # Met.no CAP identifier
+    level: 3
+    level_name: "orange"
+    danger_type: "Wind"  # or "Rain", "Snow", "Thunderstorm", etc.
+    warning_type: "metalerts"
+    event_type: "wind"
+    municipalities: []  # Not applicable for Met.no alerts
+    areas:
+      - "Oslo"
+      - "Akershus"
+    valid_from: "2026-01-09T12:00:00+01:00"
+    valid_to: "2026-01-10T06:00:00+01:00"
+    main_text: "Orange wind warning"
+    warning_text: "Strong winds expected with gusts up to 30 m/s..."
+    instruction: "Secure loose objects. Avoid unnecessary travel..."
+    consequences: "Damage to infrastructure possible..."
+    certainty: "Likely"
+    url: "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger"
 ```
 
 #### Alert Attributes Explained
@@ -226,10 +308,12 @@ The integration **automatically displays warning icons** based on alert type and
 
 ### Available Icons
 
-| Warning Type | Yellow (2) | Orange (3) | Red (4) |
-|-------------|-----------|-----------|---------|
-| **Landslide** | 🟡 Landslide | 🟠 Severe Landslide | 🔴 Extreme Landslide |
-| **Flood** | 🟡 Flood | 🟠 Severe Flood | 🔴 Extreme Flood |
+| Warning Type | Yellow (2) | Orange (3) | Red (4) | Black (5) |
+|-------------|-----------|-----------|---------|----------|
+| **Landslide** | 🟡 Landslide | 🟠 Severe Landslide | 🔴 Extreme Landslide | - |
+| **Flood** | 🟡 Flood | 🟠 Severe Flood | 🔴 Extreme Flood | - |
+| **Avalanche** | 🟡 Avalanche | 🟠 Considerable Avalanche | 🔴 High Avalanche | ⚫ Extreme Avalanche |
+| **Weather (Met.no)** | 🟡 Weather Alert | 🟠 Severe Weather | 🔴 Extreme Weather | - |
 
 ### Icon Source & License
 
@@ -255,23 +339,7 @@ To override with your own icons:
 
 ## Dashboard Examples
 
-For comprehensive dashboard card examples, see our dedicated guides:
-
-### 📊 [COMPLETE_DASHBOARD_EXAMPLE.md](COMPLETE_DASHBOARD_EXAMPLE.md)
-Complete dashboard layouts with:
-- Multi-card layouts
-- Vertical stacks
-- Conditional displays
-- Color-coded severity
-- Mobile-optimized views
-
-### 🎨 [FRONTEND_EXAMPLES.md](FRONTEND_EXAMPLES.md)
-Advanced frontend examples with:
-- Custom card configurations
-- Template sensors
-- Styling examples
-- Integration with maps
-- Notification setups
+The integration works with all standard Home Assistant cards and custom cards from HACS.
 
 ---
 
@@ -285,7 +353,7 @@ Advanced frontend examples with:
 type: entities
 title: Landslide Warnings
 entities:
-  - entity: sensor.varsom_landslide_vestland
+  - entity: sensor.norway_alerts_landslide_vestland
     name: Vestland Alert Level
 ```
 
@@ -294,7 +362,7 @@ entities:
 ```yaml
 type: markdown
 content: |
-  {% set alerts = state_attr('sensor.varsom_landslide_vestland', 'alerts') or [] %}
+  {% set alerts = state_attr('sensor.norway_alerts_landslide_vestland', 'alerts') or [] %}
   {% if alerts | count > 0 %}
   ## Active Warnings ({{ alerts | count }})
   {% for alert in alerts %}
@@ -321,16 +389,16 @@ automation:
   - alias: "Varsom Yellow Alert Notification"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.varsom_landslide_vestland
+        entity_id: sensor.norway_alerts_landslide_vestland
         above: 1
     action:
       - service: notify.mobile_app
         data:
-          title: "Landslide Warning - {{ state_attr('sensor.varsom_landslide_vestland', 'highest_level') | upper }}"
+          title: "Landslide Warning - {{ state_attr('sensor.norway_alerts_landslide_vestland', 'highest_level') | upper }}"
           message: >
-            {{ state_attr('sensor.varsom_landslide_vestland', 'alerts')[0].main_text }}
+            {{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].main_text }}
           data:
-            url: "{{ state_attr('sensor.varsom_landslide_vestland', 'alerts')[0].url }}"
+            url: "{{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].url }}"
             tag: "varsom_alert"
             importance: high
 ```
@@ -342,16 +410,16 @@ automation:
   - alias: "Varsom Red Alert - Emergency"
     trigger:
       - platform: numeric_state
-        entity_id: sensor.varsom_landslide_vestland
+        entity_id: sensor.norway_alerts_landslide_vestland
         above: 3  # Red level
     action:
       - service: notify.notify
         data:
           title: "🚨 EXTREME WEATHER WARNING 🚨"
           message: >
-            {{ state_attr('sensor.varsom_landslide_vestland', 'alerts')[0].main_text }}
+            {{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].main_text }}
             
-            {{ state_attr('sensor.varsom_landslide_vestland', 'alerts')[0].advice_text }}
+            {{ state_attr('sensor.norway_alerts_landslide_vestland', 'alerts')[0].advice_text }}
       - service: light.turn_on
         target:
           entity_id: light.living_room
@@ -369,16 +437,16 @@ template:
   - sensor:
       - name: "Bergen Landslide Alert"
         state: >
-          {% set alerts = state_attr('sensor.varsom_landslide_vestland', 'alerts') or [] %}
+          {% set alerts = state_attr('sensor.norway_alerts_landslide_vestland', 'alerts') or [] %}
           {% set bergen_alerts = alerts | selectattr('municipalities', 'search', 'Bergen') | list %}
           {{ bergen_alerts[0].level_name if bergen_alerts else 'green' }}
         attributes:
           alert_count: >
-            {% set alerts = state_attr('sensor.varsom_landslide_vestland', 'alerts') or [] %}
+            {% set alerts = state_attr('sensor.norway_alerts_landslide_vestland', 'alerts') or [] %}
             {% set bergen_alerts = alerts | selectattr('municipalities', 'search', 'Bergen') | list %}
             {{ bergen_alerts | length }}
           main_text: >
-            {% set alerts = state_attr('sensor.varsom_landslide_vestland', 'alerts') or [] %}
+            {% set alerts = state_attr('sensor.norway_alerts_landslide_vestland', 'alerts') or [] %}
             {% set bergen_alerts = alerts | selectattr('municipalities', 'search', 'Bergen') | list %}
             {{ bergen_alerts[0].main_text if bergen_alerts else 'No alerts' }}
 ```
@@ -390,13 +458,13 @@ template:
   - sensor:
       - name: "All Varsom Alerts"
         state: >
-          {% set landslide = states('sensor.varsom_landslide_vestland') | int %}
-          {% set flood = states('sensor.varsom_flood_vestland') | int %}
+          {% set landslide = states('sensor.norway_alerts_landslide_vestland') | int %}
+          {% set flood = states('sensor.norway_alerts_flood_vestland') | int %}
           {{ max(landslide, flood) }}
         attributes:
           highest_level: >
-            {% set landslide = states('sensor.varsom_landslide_vestland') | int %}
-            {% set flood = states('sensor.varsom_flood_vestland') | int %}
+            {% set landslide = states('sensor.norway_alerts_landslide_vestland') | int %}
+            {% set flood = states('sensor.norway_alerts_flood_vestland') | int %}
             {% set level = max(landslide, flood) %}
             {{ ['green', 'yellow', 'orange', 'red'][level - 1] if level > 0 else 'green' }}
 ```
@@ -477,7 +545,7 @@ Run these checks to verify everything works:
 
 1. **Check Sensor Exists**
    - Go to **Developer Tools** → **States**
-   - Search for `sensor.varsom`
+   - Search for `sensor.norway_alerts`
    - Should see your configured sensor(s)
 
 2. **View Attributes**
@@ -486,7 +554,7 @@ Run these checks to verify everything works:
 
 3. **Check Logs**
    - Go to **Settings** → **System** → **Logs**
-   - Filter for "varsom"
+   - Filter for "norway_alerts"
    - Should see successful API fetch messages
 
 4. **Verify Icon**
@@ -500,12 +568,20 @@ Run these checks to verify everything works:
 
 ### Endpoints Used
 
-This integration uses the official NVE API:
+This integration uses official Norwegian government APIs:
 
+**NVE (Norwegian Water Resources and Energy Directorate)**:
 - **Landslide API**: `https://api01.nve.no/hydrology/forecast/landslide/v1.0.10/api`
 - **Flood API**: `https://api01.nve.no/hydrology/forecast/flood/v1.0.10/api`
-- **Update Interval**: 30 minutes
+- **Avalanche API**: `https://api01.nve.no/hydrology/forecast/avalanche/v6.3.0`
 - **Documentation**: https://api.nve.no/doc/
+
+**Met.no (Norwegian Meteorological Institute)**:
+- **MetAlerts API**: `https://api.met.no/weatherapi/metalerts/2.0`
+- **Documentation**: https://api.met.no/weatherapi/metalerts/2.0/documentation
+- **Format**: CAP (Common Alerting Protocol) 1.2
+
+**Update Interval**: 30 minutes for all sources
 
 ### Language Support
 
@@ -535,15 +611,16 @@ The API uses the `Språknøkkel` parameter:
 ## Credits
 
 - **Author**: Jeremy Cook (@jm-cook)
-- **Data Source**: NVE (Norwegian Water Resources and Energy Directorate)
-- **Website**: https://www.varsom.no/
+- **Data Sources**: 
+  - NVE (Norwegian Water Resources and Energy Directorate) - https://www.varsom.no/
+  - Met.no (Norwegian Meteorological Institute) - https://www.met.no/
 - **Warning Icons**: Yr warning icons © 2015 by Yr/NRK, licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/)
 
 ### Acknowledgments
 
-- Based on patterns from the Met Alerts integration
-- Icons from the official Yr.no warning icon set
-- API documentation from NVE
+- Met.no MetAlerts API integration based on code by @kutern84 and @svenove from [met_alerts](https://github.com/kurtern84/met_alerts) (MIT License)
+- Icons from the official Yr.no warning icon set  
+- API documentation from NVE and Met.no
 - Community feedback and contributions
 
 ---
@@ -568,7 +645,6 @@ Contributions are welcome! Please:
 
 ### See Also
 
-- [DEV_SUMMARY.md](DEV_SUMMARY.md) - Technical development notes and architecture
 - [CHANGELOG.md](CHANGELOG.md) - Version history and changes
 
 ---
@@ -583,14 +659,14 @@ The warning icons are licensed under CC BY 4.0 by Yr/NRK.
 
 ## Support
 
-- **Issues**: https://github.com/jm-cook/varsom/issues
-- **Discussions**: https://github.com/jm-cook/varsom/discussions
+- **Issues**: https://github.com/jm-cook/norway_alerts/issues
+- **Discussions**: https://github.com/jm-cook/norway_alerts/discussions
 - **Documentation**: This README and linked guides
 
 ---
 
-**Note**: This integration is not affiliated with NVE or Varsom.no. It provides an interface to their public API for use in Home Assistant.
+**Note**: This integration is not affiliated with NVE, Varsom.no, or Met.no. It provides an interface to their public APIs for use in Home Assistant.
 
-**Last Updated**: December 2025  
-**Integration Version**: 1.0.0  
+**Last Updated**: January 2026  
+**Integration Version**: 2.0.0  
 **Minimum HA Version**: 2024.1.0

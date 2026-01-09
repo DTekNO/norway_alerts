@@ -5,6 +5,74 @@ All notable changes to the Varsom Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2026-01-09
+
+### Breaking Changes
+- **Integration renamed**: `varsom` → `norway_alerts`
+  - Domain changed to better reflect all warning types (geohazards + weather)
+  - Custom component directory: `/custom_components/norway_alerts/`
+  - Sensors now prefixed with `sensor.norway_alerts_*`
+  - Requires removal of old integration and re-adding with new name
+
+### Added
+- **Met.no MetAlerts API integration** - Weather warnings from Norwegian Meteorological Institute
+  - Support for all meteorological warning types (wind, rain, snow, thunderstorms, etc.)
+  - Latitude/longitude-based location configuration
+  - CAP (Common Alerting Protocol) format support
+- **Avalanche warnings** - Full support for NVE avalanche warnings
+  - 5-level severity scale (green, yellow, orange, red, black)
+  - Avalanche-specific attributes and data
+- **Two-step configuration flow** - Improved setup process
+  - Step 1: Select warning type and general settings
+  - Step 2: Conditional location fields (county OR coordinates)
+- **Persistent notifications** - Optional notification system
+  - Configurable severity thresholds
+  - Notifications for new or changed alerts
+  - Severity filter options (all, yellow+, orange+, red only)
+- **Test mode** - Generate fake alerts for testing dashboards and automations
+
+### Changed
+- **Architecture**: One sensor per warning type (cleaner separation)
+  - Each configuration creates a single dedicated sensor
+  - Users add integration multiple times for different types
+  - Better attribute organization per warning type
+- **Location handling**: Conditional fields based on warning type
+  - NVE warnings (landslide/flood/avalanche): County-based with municipality filter
+  - Met.no weather alerts: Latitude/longitude coordinates
+  - Default coordinates from Home Assistant location (editable)
+- **API Factory pattern**: Unified API client architecture
+  - BaseWarningAPI abstract class
+  - Separate API classes for each warning source
+  - Consistent data format across all warning types
+
+### Technical Details
+- Based on MIT-licensed code from @kutern84 and @svenove (met_alerts)
+- Proper attribution maintained in source code
+- Updated WarningAPIFactory to support latitude/longitude parameters
+- Enhanced error handling for different location types
+- Backward compatibility for existing configurations
+
+### Documentation
+- **Consolidated README.md** - All documentation in one place
+  - MetAlerts configuration and usage
+  - Avalanche warnings documentation
+  - Updated examples for all warning types
+  - Architecture explanation
+- **Removed obsolete files**:
+  - NOTIFICATION_EXAMPLES.md
+  - REFACTORING_SUMMARY.md
+  - FRONTEND_EXAMPLES.md
+  - DEV_SUMMARY.md
+  - COMPLETE_DASHBOARD_EXAMPLE.md
+  - AVALANCHE_FILTERING_GUIDE.md
+  - AVALANCHE_DISPLAY_EXAMPLES.md
+  - AVALANCHE_ATTRIBUTES_UPDATE.md
+  - notes/ directory
+
+### Credits
+- Met.no MetAlerts integration code: @kutern84 and @svenove
+- Original met_alerts repository: https://github.com/kurtern84/met_alerts
+
 ## [1.0.0] - 2025-12-15
 
 ### Added

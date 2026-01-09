@@ -1,6 +1,6 @@
 {
-  "domain": "varsom",
-  "name": "Varsom Alerts",
+  "domain": "norway_alerts",
+  "name": "Norway Alerts",
   "codeowners": [
     "@jm-cook"
   ],
