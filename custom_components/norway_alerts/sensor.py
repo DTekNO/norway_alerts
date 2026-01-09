@@ -178,20 +178,39 @@ class VarsomAlertsCoordinator(DataUpdateCoordinator):
                     test_alert.update({
                         "ValidFrom": "2025-12-19T00:00:00+01:00",
                         "ValidTo": "2025-12-20T23:59:59+01:00",
-                        "PublishTime": "2025-12-19T08:00:00+01:00",
+                        "PublishTime": "",  # Not provided by metalerts
+                        "RegionName": "Vestland, Bergen",
+                        # CAP-specific fields matching met_alerts integration
                         "title": "Orange wind warning 2025-12-19T00:00:00+01:00, 2025-12-20T23:59:59+01:00",
+                        "starttime": "2025-12-19T00:00:00+01:00",
+                        "endtime": "2025-12-20T23:59:59+01:00",
                         "event": "Wind",
+                        "event_awareness_name": "orange; wind",
                         "description": warning_text,
                         "instruction": advice_text,
                         "consequences": consequence_text,
                         "certainty": "Likely",
                         "severity": "Moderate",
                         "awareness_level": "3; orange; Moderate",
+                        "awareness_level_numeric": "3",
+                        "awareness_level_color": "orange",
+                        "awareness_level_name": "Moderate",
                         "awareness_type": "2; wind",
                         "contact": "Norwegian Meteorological Institute",
                         "county": ["Vestland"],
                         "area": "Vestland, Bergen",
+                        "geographic_domain": "land",
+                        "risk_matrix_color": "orange",
+                        "trigger_level": "moderate",
+                        "ceiling": None,
+                        "resources": [
+                            {
+                                "uri": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger",
+                                "mimeType": "text/html"
+                            }
+                        ],
                         "resource_url": "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger",
+                        "map_url": None,
                         "web": "https://www.met.no",
                     })
                 else:
@@ -578,22 +597,17 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                 icon_key = f"{warning_type}-{level_color}" if warning_type and level_color != "green" else None
                 individual_icon = ICON_DATA_URLS.get(icon_key) if icon_key else None
                 
-                # New alert - add to dict
+                # New alert - create base dict with common fields only
                 alert_dict = {
                     "id": forecast_id,
-                    "master_id": master_id,
                     "level": int(activity_level),
                     "level_name": ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown"),
                     "danger_type": alert.get("DangerTypeName", ""),
                     "warning_type": alert.get("_warning_type", "unknown"),
-                    "municipalities": municipalities,
                     "valid_from": alert.get("ValidFrom", ""),
                     "valid_to": alert.get("ValidTo", ""),
-                    "danger_increases": alert.get("DangerIncreaseDateTime"),
-                    "danger_decreases": alert.get("DangerDecreaseDateTime"),
                     "main_text": alert.get("MainText", ""),
-                    "url": varsom_url,
-                    "entity_picture": individual_icon,  # Individual icon for each alert
+                    "entity_picture": individual_icon,
                 }
                 
                 # Add warning-type-specific attributes
@@ -610,17 +624,36 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                         "certainty": alert.get("certainty", ""),
                         "severity": alert.get("severity", ""),
                         "awareness_level": alert.get("awareness_level", ""),
+                        "awareness_level_numeric": alert.get("awareness_level_numeric", ""),
+                        "awareness_level_color": alert.get("awareness_level_color", ""),
+                        "awareness_level_name": alert.get("awareness_level_name", ""),
                         "awareness_type": alert.get("awareness_type", ""),
+                        "event_awareness_name": alert.get("event_awareness_name", ""),
                         "contact": alert.get("contact", ""),
                         "county": alert.get("county", []),
+                        "starttime": alert.get("starttime", ""),
+                        "endtime": alert.get("endtime", ""),
+                        "resources": alert.get("resources", []),
                         "map_url": alert.get("map_url"),
                         "resource_url": alert.get("resource_url", ""),
                         "web": alert.get("web", ""),
+                        "geographic_domain": alert.get("geographic_domain", ""),
+                        "risk_matrix_color": alert.get("risk_matrix_color", ""),
+                        "trigger_level": alert.get("trigger_level"),
+                        "ceiling": alert.get("ceiling"),
                     })
                     # Override URL for Met.no alerts
                     alert_dict["url"] = alert.get("resource_url") or "https://www.met.no/vaer-og-klima/ekstremvaervarsler-og-andre-faremeldinger"
                 elif warning_type == "avalanche":
+                    # Avalanche warnings - NVE specific fields
                     alert_dict.update({
+                        # NVE common fields
+                        "master_id": master_id,
+                        "municipalities": municipalities,
+                        "danger_increases": alert.get("DangerIncreaseDateTime"),
+                        "danger_decreases": alert.get("DangerDecreaseDateTime"),
+                        "url": varsom_url,
+                        
                         # Geographical data
                         "region_id": alert.get("_region_id", alert.get("RegionId")),
                         "region_name": alert.get("_region_name", alert.get("RegionName")),
@@ -649,8 +682,16 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                         "mountain_weather": alert.get("MountainWeather", {}),  # Keep complex structure too
                     })
                 else:
-                    # Use generic attributes for landslide and flood warnings
+                    # Landslide and flood warnings - NVE generic attributes
                     alert_dict.update({
+                        # NVE common fields
+                        "master_id": master_id,
+                        "municipalities": municipalities,
+                        "danger_increases": alert.get("DangerIncreaseDateTime"),
+                        "danger_decreases": alert.get("DangerDecreaseDateTime"),
+                        "url": varsom_url,
+                        
+                        # Generic warning fields
                         "warning_text": alert.get("WarningText", ""),
                         "advice_text": alert.get("AdviceText", ""),
                         "consequence_text": alert.get("ConsequenceText", ""),
