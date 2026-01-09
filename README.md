@@ -133,8 +133,9 @@ The location fields shown depend on your selected warning type:
 **For Geohazard Warnings** (Landslide, Flood, Avalanche):
 - **County** (Required) - Select your Norwegian county:
   - Oslo (03), Rogaland (11), Møre og Romsdal (15), Nordland (18)
-  - Viken (30), Innlandet (34), Vestfold og Telemark (38)  
-  - Agder (42), Vestland (46), Trøndelag (50), Troms og Finnmark (54)
+  - Østfold (31), Akershus (32), Buskerud (33), Innlandet (34)
+  - Vestfold (39), Telemark (40), Agder (42), Vestland (46)
+  - Trøndelag (50), Troms (55), Finnmark (56)
 - **Municipality Filter** (Optional) - Filter to specific municipalities:
   - Leave empty for all alerts in the county
   - Enter names separated by commas: `Bergen, Stord`

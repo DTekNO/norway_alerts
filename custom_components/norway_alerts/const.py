@@ -82,17 +82,22 @@ ICON_DATA_URLS = {
     "avalanche-black": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0OCIgaGVpZ2h0PSI0OCIgZmlsbD0ibm9uZSIgdmlld0JveD0iLTggLTggNDggNDgiPjxwYXRoIGZpbGw9IiNmZmYiIGZpbGwtcnVsZT0iZXZlbm9kZCIgZD0iTTMxLjU1NiAyOC4yNGExLjUgMS41IDAgMCAxLTEuMzAyIDIuMjQ1SDEuN0ExLjUgMS41IDAgMCAxIC4zOTggMjguMjRMMTQuNjc1IDMuMjU2YTEuNSAxLjUgMCAwIDEgMi42MDQgMGwxNC4yNzcgMjQuOTg1eiIgY2xpcC1ydWxlPSJldmVub2RkIi8+PHBhdGggZmlsbD0iIzAwMCIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMzAuMjc3IDMwYTEgMSAwIDAgMCAuODY4LTEuNDk2TDE2Ljg2OCAzLjUxOWExIDEgMCAwIDAtMS43MzYgMEwuODU1IDI4LjUwNEExIDEgMCAwIDAgMS43MjMgMzBoMjguNTU0eiIgY2xpcC1ydWxlPSJldmVub2RkIi8+PHBhdGggZmlsbD0iIzczMTQxNSIgZmlsbC1ydWxlPSJldmVub2RkIiBkPSJNMzEuMjc3IDI5YTEgMSAwIDAgMC0uMTMyLS40OTZMMTYuODY4IDMuNTE5YTEgMSAwIDAgMC0xLjczNiAwTC44NTUgMjguNTA0QTEgMSAwIDAgMCAxLjcyMyAzMGgyOC41NTRhMSAxIDAgMCAwIDEtMXpNMTYuNDM0IDMuNzY3bDE0LjI3NyAyNC45ODVhLjUuNSAwIDAgMS0uNDM0Ljc0OEgxLjcyM2EuNS41IDAgMCAxLS40MzQtLjc0OEwxNS41NjYgMy43NjdhLjUuNSAwIDAgMSAuODY4IDB6IiBjbGlwLXJ1bGU9ImV2ZW5vZGQiLz48Y2lyY2xlIGZpbGw9IiNmZmYiIGN4PSIxNiIgY3k9IjI2IiByPSIxIi8+PHJlY3QgZmlsbD0iI2ZmZiIgd2lkdGg9IjIiIGhlaWdodD0iMTAiIHg9IjE1IiB5PSIxMyIgcng9IjEiLz48L3N2Zz4=",
 }
 
-# Norwegian counties with IDs (based on NVE API)
+# Norwegian counties with IDs (based on NVE API and current administrative divisions)
+# Source: https://snl.no/fylkesnummer
 COUNTIES = {
     "03": "Oslo",
     "11": "Rogaland",
     "15": "Møre og Romsdal",
     "18": "Nordland",
-    "30": "Viken",
+    "31": "Østfold",
+    "32": "Akershus",
+    "33": "Buskerud",
     "34": "Innlandet",
-    "38": "Vestfold og Telemark",
+    "39": "Vestfold",
+    "40": "Telemark",
     "42": "Agder",
     "46": "Vestland",
     "50": "Trøndelag",
-    "54": "Troms og Finnmark",
+    "55": "Troms",
+    "56": "Finnmark",
 }
