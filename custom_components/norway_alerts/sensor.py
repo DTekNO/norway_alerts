@@ -628,7 +628,10 @@ class VarsomAlertsSensor(CoordinatorEntity, SensorEntity):
                 }
                 
                 # Add warning-type-specific attributes
-                if warning_type == "metalerts":
+                # Detect MetAlerts by presence of CAP-specific 'event' field
+                is_metalert = "event" in alert and "awareness_level" in alert
+                
+                if is_metalert:
                     # Met.no weather alerts - use CAP-based fields
                     alert_dict.update({
                         "title": alert.get("title", ""),
