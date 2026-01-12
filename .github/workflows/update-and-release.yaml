@@ -1,0 +1,79 @@
+name: Update and release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  update-manifest:
+    runs-on: ubuntu-latest
+    outputs:
+      integration_domain: ${{ steps.find_domain.outputs.domain }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get release version
+        id: get_version
+        run: |
+          # Extract version from tag and remove leading 'v' if present
+          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG_VERSION#v}"
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Tag: $TAG_VERSION -> Version: $VERSION"
+
+      - name: Find integration domain
+        id: find_domain
+        run: |
+          # Find the first manifest.json in custom_components and extract the domain
+          MANIFEST=$(find custom_components -name "manifest.json" -type f | head -n 1)
+          DOMAIN=$(jq -r '.domain' "$MANIFEST")
+          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          echo "Found integration domain: $DOMAIN (from $MANIFEST)"
+
+      - name: Update version in manifest.json
+        run: |
+          DOMAIN="${{ steps.find_domain.outputs.domain }}"
+          cd ${{ github.workspace }}/custom_components/$DOMAIN
+          jq '.version = "${{ steps.get_version.outputs.VERSION }}"' manifest.json > manifest.json.tmp
+          mv manifest.json.tmp manifest.json
+          echo "Updated manifest.json for $DOMAIN to version ${{ steps.get_version.outputs.VERSION }}"
+
+      - name: Commit the updated manifest and push changes
+        run: |
+          DOMAIN="${{ steps.find_domain.outputs.domain }}"
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          git add custom_components/$DOMAIN/manifest.json
+          if ! git diff --cached --quiet; then
+            git commit -m "Update manifest version to ${{ github.ref_name }}"
+            git push origin HEAD:main
+          fi
+
+          # Move the tag to this commit and force-push
+          git tag -f ${{ github.ref_name }}
+          git push origin ${{ github.ref_name }} --force
+
+  release:
+    needs: update-manifest
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main  # Force checkout of main branch to get the updated manifest
+      
+      - name: 📦 Create integration ZIP
+        run: |
+          DOMAIN="${{ needs.update-manifest.outputs.integration_domain }}"
+          cd ${{ github.workspace }}/custom_components/$DOMAIN
+          zip $DOMAIN.zip -r ./
+          echo "Created $DOMAIN.zip"
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ github.workspace }}/custom_components/${{ needs.update-manifest.outputs.integration_domain }}/${{ needs.update-manifest.outputs.integration_domain }}.zip
