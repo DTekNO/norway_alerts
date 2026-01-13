@@ -28,11 +28,16 @@ class TestNorwayAlertsCoordinator:
             lang="en",
         )
         
-        with patch.object(coordinator._api, "fetch_warnings", return_value=mock_county_api_response):
-            await coordinator._async_update_data()
+        # Mock the WarningAPIFactory and API client
+        with patch("custom_components.norway_alerts.sensor.WarningAPIFactory") as mock_factory:
+            mock_api = AsyncMock()
+            mock_api.fetch_warnings = AsyncMock(return_value=mock_county_api_response)
+            mock_factory.return_value.get_api.return_value = mock_api
+            
+            result = await coordinator._async_update_data()
         
-        assert coordinator.data is not None
-        assert len(coordinator.data.get("active_alerts", [])) == 1
+        assert result is not None
+        assert len(result) == 1
 
     @pytest.mark.asyncio
     async def test_coordinator_update_no_alerts(self, mock_hass):
@@ -47,11 +52,16 @@ class TestNorwayAlertsCoordinator:
             lang="en",
         )
         
-        with patch.object(coordinator._api, "fetch_warnings", return_value=[]):
-            await coordinator._async_update_data()
+        # Mock the WarningAPIFactory and API client
+        with patch("custom_components.norway_alerts.sensor.WarningAPIFactory") as mock_factory:
+            mock_api = AsyncMock()
+            mock_api.fetch_warnings = AsyncMock(return_value=[])
+            mock_factory.return_value.get_api.return_value = mock_api
+            
+            result = await coordinator._async_update_data()
         
-        assert coordinator.data is not None
-        assert len(coordinator.data.get("active_alerts", [])) == 0
+        assert result is not None
+        assert len(result) == 0
 
 
 class TestNorwayAlertsSensor:
@@ -78,7 +88,7 @@ class TestNorwayAlertsSensor:
         )
         
         assert sensor is not None
-        assert sensor.name == "Vestland Landslide"
+        assert sensor.name == "Norway Alerts Landslide Vestland"
 
     def test_sensor_state_with_alerts(self):
         """Test sensor state when alerts exist."""
@@ -93,12 +103,8 @@ class TestNorwayAlertsSensor:
             lang="en",
         )
         
-        # Mock coordinator data
-        coordinator.data = {
-            "active_alerts": [{"ActivityLevel": "2"}],
-            "highest_level_numeric": 2,
-            "highest_level": "yellow",
-        }
+        # Mock coordinator data - it returns a list of alerts
+        coordinator.data = [{"ActivityLevel": "2", "Id": 123}]
         
         sensor = NorwayAlertsSensor(
             coordinator=coordinator,
@@ -122,12 +128,8 @@ class TestNorwayAlertsSensor:
             lang="en",
         )
         
-        # Mock coordinator data with no alerts
-        coordinator.data = {
-            "active_alerts": [],
-            "highest_level_numeric": 0,
-            "highest_level": "green",
-        }
+        # Mock coordinator data with no alerts (empty list)
+        coordinator.data = []
         
         sensor = NorwayAlertsSensor(
             coordinator=coordinator,
