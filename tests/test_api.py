@@ -232,7 +232,7 @@ class TestMetAlertsAPI:
             mock_session = MagicMock()
             mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock(return_value=None
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             mock_session_class.return_value = mock_session
             
             warnings = await api.fetch_warnings()
