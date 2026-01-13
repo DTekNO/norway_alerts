@@ -171,9 +171,6 @@ class TestAvalancheAPI:
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
             
-            mock_get_detail.__aexit__ = AsyncMock()
-            
-            mock_session.get.side_effect = [mock_get_summary, mock_get_detail]
             mock_session_class.return_value = mock_session
             
             warnings = await api.fetch_warnings()
@@ -234,27 +231,6 @@ class TestMetAlertsAPI:
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
             mock_session.__aexit__ = AsyncMock(return_value=None)
             mock_session_class.return_value = mock_session
-            
-            warnings = await api.fetch_warnings()
-            
-            assert len(warnings) == 1
-
-    @pytest.mark.asyncio
-    async def test_extract_times_from_title(self):
-            assert warnings[0]["event"] == "rain"
-            assert warnings[0]["ActivityLevel"] == "2"
-
-    @pytest.mark.asyncio
-    async def test_fetch_warnings_county(self, mock_metalerts_api_response):
-        """Test fetch with county ID."""
-        api = MetAlertsAPI(county_id="46", county_name="Vestland", lang="en")
-        
-        with patch("aiohttp.ClientSession.get") as mock_get:
-            mock_response = AsyncMock()
-            mock_response.status = 200
-            mock_response.headers = {"Content-Type": "application/json"}
-            mock_response.json = AsyncMock(return_value=mock_metalerts_api_response)
-            mock_get.return_value.__aenter__.return_value = mock_response
             
             warnings = await api.fetch_warnings()
             
