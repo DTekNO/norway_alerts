@@ -11,8 +11,8 @@ This directory contains tests for the Norway Alerts integration.
   - `conftest.py`: Pytest fixtures and shared test configuration
 
 - **Manual Tests** (for API exploration/debugging):
-  - `test_nve_api.py`: Manual script to test NVE API responses
-  - `test_current_api.py`: Manual script to test current avalanche API logic
+  - `manual_nve_api.py`: Manual script to test NVE API responses
+  - `manual_avalanche_api.py`: Manual script to test current avalanche API logic
 
 ## Running Unit Tests
 
@@ -47,10 +47,10 @@ These scripts are for manual API exploration and require an active internet conn
 
 ```bash
 # Test NVE API (landslide/flood)
-python tests/test_nve_api.py
+python tests/manual_nve_api.py
 
 # Test current avalanche API
-python tests/test_current_api.py
+python tests/manual_avalanche_api.py
 ```
 
 ## For HA Core Integration

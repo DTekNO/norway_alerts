@@ -5,6 +5,11 @@ python_classes = "Test*"
 python_functions = "test_*"
 asyncio_mode = "auto"
 addopts = "-v --tb=short --strict-markers"
+norecursedirs = [".git", ".venv", "test_data"]
+
+# Exclude manual test scripts
+testpaths = ["tests"]
+python_files = ["test_*.py", "!manual_*.py"]
 
 [tool.coverage.run]
 source = ["custom_components/norway_alerts"]
