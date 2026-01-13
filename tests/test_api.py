@@ -22,17 +22,22 @@ class TestLandslideAPI:
         
         # Mock the entire ClientSession to avoid thread creation
         with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            # Create mock response
+            mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"Content-Type": "application/json"}
             mock_response.json = AsyncMock(return_value=mock_county_api_response)
             
-            # Mock the context managers properly
+            # Create mock context manager for get()
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            # Create mock session
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
             mock_session_class.return_value = mock_session
             
@@ -48,16 +53,19 @@ class TestLandslideAPI:
         api = LandslideAPI(county_id="46", county_name="Vestland", lang="en")
         
         with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"Content-Type": "application/json"}
             mock_response.json = AsyncMock(return_value=[])
             
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
             mock_session_class.return_value = mock_session
             
@@ -71,14 +79,17 @@ class TestLandslideAPI:
         api = LandslideAPI(county_id="46", county_name="Vestland", lang="en")
         
         with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status = 500
             
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
             mock_session_class.return_value = mock_session
             
@@ -96,16 +107,19 @@ class TestFloodAPI:
         api = FloodAPI(county_id="46", county_name="Vestland", lang="en")
         
         with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"Content-Type": "application/json"}
             mock_response.json = AsyncMock(return_value=mock_county_api_response)
             
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
             mock_session_class.return_value = mock_session
             
@@ -130,31 +144,30 @@ class TestAvalancheAPI:
                     {"RegionId": 3022, "DangerLevel": 3}
                 ]
             }
-        ]
-        
-        with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            
-            # First call returns summary
-            mock_summary = AsyncMock()
-            mock_summary.status = 200
-            mock_summary.json = AsyncMock(return_value=summary_data)
+        ]# First call returns summary
+            mock_summary_response = MagicMock()
+            mock_summary_response.status = 200
+            mock_summary_response.json = AsyncMock(return_value=summary_data)
             
             # Second call returns details
-            mock_detail = AsyncMock()
-            mock_detail.status = 200
-            mock_detail.json = AsyncMock(return_value=mock_avalanche_api_response)
+            mock_detail_response = MagicMock()
+            mock_detail_response.status = 200
+            mock_detail_response.json = AsyncMock(return_value=mock_avalanche_api_response)
             
+            # Create context managers
+            mock_get_summary_cm = MagicMock()
+            mock_get_summary_cm.__aenter__ = AsyncMock(return_value=mock_summary_response)
+            mock_get_summary_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_get_detail_cm = MagicMock()
+            mock_get_detail_cm.__aenter__ = AsyncMock(return_value=mock_detail_response)
+            mock_get_detail_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(side_effect=[mock_get_summary_cm, mock_get_detail_cm])
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
-            # Create context manager mocks for get calls
-            mock_get_summary = AsyncMock()
-            mock_get_summary.__aenter__ = AsyncMock(return_value=mock_summary)
-            mock_get_summary.__aexit__ = AsyncMock()
-            
-            mock_get_detail = AsyncMock()
-            mock_get_detail.__aenter__ = AsyncMock(return_value=mock_detail)
             mock_get_detail.__aexit__ = AsyncMock()
             
             mock_session.get.side_effect = [mock_get_summary, mock_get_detail]
@@ -176,15 +189,19 @@ class TestMetAlertsAPI:
         
         with patch("aiohttp.ClientSession") as mock_session_class:
             mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"Content-Type": "application/json"}
             mock_response.json = AsyncMock(return_value=mock_metalerts_api_response)
             
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
+            
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
             mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_session.__aexit__ = AsyncMock(return_value=None)
             
             mock_session_class.return_value = mock_session
             
@@ -200,17 +217,19 @@ class TestMetAlertsAPI:
         api = MetAlertsAPI(county_id="46", county_name="Vestland", lang="en")
         
         with patch("aiohttp.ClientSession") as mock_session_class:
-            mock_session = AsyncMock()
-            mock_response = AsyncMock()
+            mock_response = MagicMock()
             mock_response.status = 200
             mock_response.headers = {"Content-Type": "application/json"}
             mock_response.json = AsyncMock(return_value=mock_metalerts_api_response)
             
-            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
-            mock_session.__aexit__ = AsyncMock()
-            mock_session.get.return_value.__aenter__ = AsyncMock(return_value=mock_response)
-            mock_session.get.return_value.__aexit__ = AsyncMock()
+            mock_get_cm = MagicMock()
+            mock_get_cm.__aenter__ = AsyncMock(return_value=mock_response)
+            mock_get_cm.__aexit__ = AsyncMock(return_value=None)
             
+            mock_session = MagicMock()
+            mock_session.get = MagicMock(return_value=mock_get_cm)
+            mock_session.__aenter__ = AsyncMock(return_value=mock_session)
+            mock_session.__aexit__ = AsyncMock(return_value=None
             mock_session_class.return_value = mock_session
             
             warnings = await api.fetch_warnings()
