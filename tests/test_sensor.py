@@ -93,6 +93,8 @@ class TestNorwayAlertsSensor:
             entry_id="test_entry",
             county_name="Vestland",
             warning_type=WARNING_TYPE_LANDSLIDE,
+            municipality_filter="",
+            template_content=None,
         )
         
         assert sensor is not None
@@ -122,6 +124,8 @@ class TestNorwayAlertsSensor:
             entry_id="test_entry",
             county_name="Vestland",
             warning_type=WARNING_TYPE_LANDSLIDE,
+            municipality_filter="",
+            template_content=None,
         )
         
         assert sensor.native_value == 1  # One alert
@@ -149,6 +153,8 @@ class TestNorwayAlertsSensor:
             entry_id="test_entry",
             county_name="Vestland",
             warning_type=WARNING_TYPE_LANDSLIDE,
+            municipality_filter="",
+            template_content=None,
         )
         
         assert sensor.native_value == 0
