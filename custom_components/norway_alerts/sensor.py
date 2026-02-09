@@ -682,14 +682,17 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     def _translate_event_name(self, event_token: str) -> str:
         """Translate event name from camelCase token to display name based on language.
         
-        Official Met.no MetAlerts event types (from API documentation):
+        Official Met.no MetAlerts event types (from CAP v.1 Profile documentation):
         blowingSnow, forestFire, gale, ice, icing, lightning, polarLow, 
         rain, rainFlood, snow, stormSurge, wind
+        
+        Translations match official Met.no CAP documentation table:
+        https://docs.api.met.no/doc/metalerts/CAP-v1-profile.html
         """
-        # English translations - Met.no MetAlerts event types
+        # English translations - Official Met.no CAP v.1 Profile
         event_names_en = {
             "blowingSnow": "Blowing snow",
-            "forestFire": "Forest fire",
+            "forestFire": "Forest fire danger",
             "gale": "Gale",
             "ice": "Ice",
             "icing": "Icing",
@@ -699,23 +702,23 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             "rainFlood": "Rain flood",
             "snow": "Snow",
             "stormSurge": "Storm surge",
-            "wind": "Wind",
+            "wind": "Vindkast",
         }
         
-        # Norwegian translations - Met.no MetAlerts event types
+        # Norwegian translations - Official Met.no CAP v.1 Profile
         event_names_no = {
             "blowingSnow": "Snøfokk",
-            "forestFire": "Skogbrann",
+            "forestFire": "Skogbrannfare",
             "gale": "Kuling",
             "ice": "Is",
             "icing": "Ising",
-            "lightning": "Lyn",
-            "polarLow": "Polarlågtrykksvarsling",
+            "lightning": "Mye lyn",
+            "polarLow": "Polart lavtrykk",
             "rain": "Regn",
-            "rainFlood": "Regnflom",
+            "rainFlood": "Styrtregn",
             "snow": "Snø",
             "stormSurge": "Stormflo",
-            "wind": "Vind",
+            "wind": "Vindkast",
         }
         
         # Choose translation based on language
