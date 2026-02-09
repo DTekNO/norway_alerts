@@ -557,8 +557,13 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
             level_name = ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown")
             level_emoji = {"1": "🟢", "2": "🟡", "3": "🟠", "4": "🔴", "5": "⚫"}.get(activity_level, "⚪")
             
-            # Format warning type nicely
-            warning_type_display = warning_type.replace("_", " ").title()
+            # Format warning type nicely - use translation for MetAlerts event codes
+            # Check if it's a camelCase event code (MetAlerts) or underscore format (NVE)
+            if "_" in warning_type:
+                warning_type_display = warning_type.replace("_", " ").title()
+            else:
+                # Use translation for MetAlerts event codes (e.g., rainFlood -> Rain flood)
+                warning_type_display = self._translate_event_name(warning_type)
             
             # Create notification title and message
             title = f"{level_emoji} {status} {warning_type_display} Warning"
@@ -589,7 +594,12 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
     async def _send_resolved_notification(self, warning_type, region_name):
         """Send a notification for a resolved alert."""
         try:
-            warning_type_display = warning_type.replace("_", " ").title()
+            # Format warning type nicely - use translation for MetAlerts event codes
+            if "_" in warning_type:
+                warning_type_display = warning_type.replace("_", " ").title()
+            else:
+                # Use translation for MetAlerts event codes
+                warning_type_display = self._translate_event_name(warning_type)
             
             title = f"✅ Resolved {warning_type_display} Warning"
             message = f"{region_name} - Warning no longer active"
