@@ -1159,7 +1159,13 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def entity_picture(self):
-        """Return embedded Yr.no warning icon based on warning type and level (worst case)."""
+        """Return embedded Yr.no warning icon based on warning type and level.
+        
+        Shows:
+        - Green icon when state = 0 (no active alerts)
+        - Stacked icons when multiple alerts (up to 3)
+        - Single icon for one alert
+        """
         if not self.coordinator.data:
             return None
         
@@ -1172,39 +1178,110 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             if alert.get("ActivityLevel", "1") not in ("0", "1")
         ]
         
+        # Show green icon if no active alerts
         if not active_alerts:
-            return None
+            return ICON_DATA_URLS.get("generic-green")
         
-        # Find highest alert level from active alerts
-        max_level = 0
-        warning_type = None
+        # Get unique alerts (by warning type and level)
+        alert_icons = []
+        seen = set()
         
         for alert in active_alerts:
             level = int(alert.get("ActivityLevel", "1"))
-            if level > max_level:
-                max_level = level
-                warning_type = alert.get("_warning_type", "")
+            warning_type = alert.get("_warning_type", "")
+            
+            if level < 2:
+                continue
+                
+            # Create unique key
+            key = f"{warning_type}-{level}"
+            if key in seen:
+                continue
+            seen.add(key)
+            
+            # Get level color
+            level_color = ACTIVITY_LEVEL_NAMES.get(str(level))
+            if not level_color or level_color == "green":
+                continue
+            
+            # Try to get specific icon
+            icon_key = f"{warning_type}-{level_color}"
+            icon_data = ICON_DATA_URLS.get(icon_key)
+            
+            # Fall back to generic if not found
+            if not icon_data:
+                generic_key = f"generic-{level_color}"
+                icon_data = ICON_DATA_URLS.get(generic_key)
+                _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
+            
+            if icon_data:
+                alert_icons.append((level, icon_data))
         
-        if max_level < 2 or not warning_type:
+        if not alert_icons:
             return None
         
-        # Map level to color
-        level_color = ACTIVITY_LEVEL_NAMES.get(str(max_level))
+        # Sort by level (lowest first) so highest severity is drawn last (on top)
+        # Limit to 10 to avoid performance issues
+        alert_icons.sort(key=lambda x: x[0])  # Ascending order - lowest first
+        alert_icons = alert_icons[:10]
         
-        if not level_color or level_color == "green":
-            return None
+        # Single alert - return the icon directly
+        if len(alert_icons) == 1:
+            return alert_icons[0][1]
         
-        # Get base64 encoded SVG from const
-        icon_key = f"{warning_type}-{level_color}"
-        icon = ICON_DATA_URLS.get(icon_key)
+        # Multiple alerts - create composite SVG
+        return self._create_composite_icon([icon[1] for icon in alert_icons])
+    
+    def _create_composite_icon(self, icon_data_urls):
+        """Create a composite SVG with multiple icons stacked horizontally.
         
-        # Fall back to generic icon if specific type not found
-        if not icon:
-            generic_key = f"generic-{level_color}"
-            icon = ICON_DATA_URLS.get(generic_key)
-            _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
+        Icons are offset horizontally by 25% to show multiple warnings.
+        Uses 512px resolution for better quality. Height remains constant while width grows.
+        """
+        import base64
+        from html import unescape
         
-        return icon
+        try:
+            # Use 512px resolution for high quality display
+            base_size = 512
+            offset = base_size // 4  # 25% horizontal overlap (128px)
+            width = base_size + (len(icon_data_urls) - 1) * offset
+            height = base_size  # Keep height constant
+            
+            svg_parts = [f'<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">']
+            
+            for i, data_url in enumerate(icon_data_urls):
+                # Extract base64 part
+                if "base64," not in data_url:
+                    continue
+                    
+                base64_data = data_url.split("base64,")[1]
+                svg_content = base64.b64decode(base64_data).decode("utf-8")
+                
+                # Parse the SVG and embed it as a group with horizontal offset only
+                x_offset = i * offset
+                
+                # Extract content between <svg...> and </svg>
+                start_idx = svg_content.find(">") + 1
+                end_idx = svg_content.rfind("</svg>")
+                
+                if start_idx > 0 and end_idx > start_idx:
+                    inner_svg = svg_content[start_idx:end_idx]
+                    # Scale up from 48px to 512px (10.67x) and translate
+                    scale = base_size / 48.0
+                    svg_parts.append(f'<g transform="translate({x_offset}, 0) scale({scale})">{inner_svg}</g>')
+            
+            svg_parts.append("</svg>")
+            composite_svg = "".join(svg_parts)
+            
+            # Encode back to data URL
+            encoded = base64.b64encode(composite_svg.encode("utf-8")).decode("utf-8")
+            return f"data:image/svg+xml;base64,{encoded}"
+            
+        except Exception as e:
+            _LOGGER.warning("Failed to create composite icon: %s", e)
+            # Fall back to first icon
+            return icon_data_urls[0] if icon_data_urls else None
     
     @property
     def icon(self):
