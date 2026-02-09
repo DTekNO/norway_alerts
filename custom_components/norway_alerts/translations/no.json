@@ -1,0 +1,74 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sett opp Norge Varsler",
+        "description": "Konfigurer varseltype og varslingsinnstillinger",
+        "data": {
+          "warning_type": "Varseltype",
+          "lang": "Språk",
+          "test_mode": "Testmodus (injiser falske varsler)",
+          "cap_format": "CAP-format (for maler)",
+          "enable_notifications": "Aktiver varsling",
+          "notification_severity": "Terskel for varslingsalvorlighet"
+        }
+      },
+      "metalerts_mode": {
+        "title": "Værvarsler stedsmodus",
+        "description": "Velg hvordan værvarsler skal filtreres",
+        "data": {
+          "metalerts_location_mode": "Stedsmodus"
+        }
+      },
+      "location": {
+        "title": "Konfigurer varselsted",
+        "description": "Angi stedsdetaljer for {warning_type} varsler",
+        "data": {
+          "county_id": "Fylke",
+          "municipality_filter": "Kommunefilter (valgfritt, kommaseparert)",
+          "latitude": "Breddegrad",
+          "longitude": "Lengdegrad"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunne ikke koble til API. Sjekk innstillingene dine og prøv igjen.",
+      "missing_county": "Fylke er påkrevd for denne varseltypen.",
+      "missing_location": "Breddegrad og lengdegrad er påkrevd for værvarsler.",
+      "unknown": "Uventet feil oppstod"
+    },
+    "abort": {
+      "already_configured": "Denne kombinasjonen av sted og varseltype er allerede konfigurert"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Oppdater Norge Varsler-konfigurasjon",
+        "description": "Oppdater innstillinger for denne varselsensoren",
+        "data": {
+          "county_id": "Fylke",
+          "warning_type": "Varseltype",
+          "lang": "Språk",
+          "municipality_filter": "Kommunefilter (valgfritt, kommaseparert)",
+          "latitude": "Breddegrad",
+          "longitude": "Lengdegrad",
+          "test_mode": "Testmodus (injiser falske varsler)",
+          "cap_format": "CAP-format (for maler)",
+          "enable_notifications": "Aktiver varsling",
+          "notification_severity": "Terskel for varslingsalvorlighet",
+          "metalerts_location_mode": "Stedsmodus",
+          "show_icon": "Vis ikon",
+          "show_status": "Vis status",
+          "show_map": "Vis kart"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Kunne ikke koble til API. Sjekk innstillingene dine og prøv igjen.",
+      "missing_county": "Fylke er påkrevd for denne varseltypen.",
+      "missing_location": "Breddegrad og lengdegrad er påkrevd for værvarsler.",
+      "unknown": "Uventet feil oppstod"
+    }
+  }
+}

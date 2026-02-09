@@ -34,7 +34,7 @@ CONF_SHOW_MAP = "show_map"
 METALERTS_MODE_LATLON = "latlon"
 METALERTS_MODE_COUNTY = "county"
 
-PLATFORMS = ["sensor", "switch"]
+PLATFORMS = ["sensor"]
 
 # Notification settings
 NOTIFICATION_SEVERITY_ALL = "all"

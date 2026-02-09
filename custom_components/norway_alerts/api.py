@@ -69,6 +69,8 @@ class CountyBasedAPI(BaseWarningAPI):
         lang_key = "2" if self.lang == "en" else "1"
         url = f"{base_url}/Warning/County/{self.county_id}/{lang_key}"
         
+        _LOGGER.info("Fetching %s warnings with language '%s' (API key: %s)", warning_type, self.lang, lang_key)
+        
         headers = {
             "Accept": "application/json",
             "User-Agent": _get_user_agent()
@@ -351,9 +353,11 @@ class MetAlertsAPI(BaseWarningAPI):
         elif self.latitude is not None and self.longitude is not None:
             # Coordinate-based filtering
             url = f"{API_BASE_METALERTS}/current.json?lat={self.latitude}&lon={self.longitude}&lang={self.lang}"
+            _LOGGER.info("Fetching metalerts with language '%s' for coordinates (%s, %s)", self.lang, self.latitude, self.longitude)
         elif self.county_id:
             # County-based filtering
             url = f"{API_BASE_METALERTS}/current.json?county={self.county_id}&lang={self.lang}"
+            _LOGGER.info("Fetching metalerts with language '%s' for county %s", self.lang, self.county_id)
         else:
             raise ValueError("MetAlerts requires either lat/lon coordinates or county_id")
         

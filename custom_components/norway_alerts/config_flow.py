@@ -95,6 +95,12 @@ class NorwayAlertsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self.context["warning_type"] = warning_type
             self.context["lang"] = user_input.get(CONF_LANG, DEFAULT_LANG)
             self.context["test_mode"] = user_input.get(CONF_TEST_MODE, False)
+            # For MetAlerts, CAP format is always True (not user-configurable)
+            # For NVE warnings, use the user selection
+            if warning_type == WARNING_TYPE_METALERTS:
+                self.context["cap_format"] = True
+            else:
+                self.context["cap_format"] = user_input.get(CONF_CAP_FORMAT, True)
             self.context["enable_notifications"] = user_input.get(CONF_ENABLE_NOTIFICATIONS, False)
             self.context["notification_severity"] = user_input.get(CONF_NOTIFICATION_SEVERITY, NOTIFICATION_SEVERITY_YELLOW_PLUS)
             
@@ -105,21 +111,27 @@ class NorwayAlertsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 return await self.async_step_location()
 
         # Show warning type selection form
-        data_schema = vol.Schema(
-            {
-                vol.Required(CONF_WARNING_TYPE, default=WARNING_TYPE_LANDSLIDE): vol.In({
-                    WARNING_TYPE_LANDSLIDE: "Landslide",
-                    WARNING_TYPE_FLOOD: "Flood",
-                    WARNING_TYPE_AVALANCHE: "Avalanche",
-                    WARNING_TYPE_METALERTS: "Weather Alerts (Met.no)",
-                }),
-                vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(["no", "en"]),
-                vol.Optional(CONF_TEST_MODE, default=False): cv.boolean,
-                vol.Optional(CONF_CAP_FORMAT, default=True): cv.boolean,
-                vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=False): cv.boolean,
-                vol.Optional(CONF_NOTIFICATION_SEVERITY, default=NOTIFICATION_SEVERITY_YELLOW_PLUS): vol.In(NOTIFICATION_SEVERITIES),
-            }
-        )
+        # Note: CAP format option only shown for NVE warnings, not for MetAlerts (always CAP)
+        schema_dict = {
+            vol.Required(CONF_WARNING_TYPE, default=WARNING_TYPE_LANDSLIDE): vol.In({
+                WARNING_TYPE_LANDSLIDE: "Landslide",
+                WARNING_TYPE_FLOOD: "Flood",
+                WARNING_TYPE_AVALANCHE: "Avalanche",
+                WARNING_TYPE_METALERTS: "Weather Alerts (Met.no)",
+            }),
+            vol.Optional(CONF_LANG, default=DEFAULT_LANG): vol.In(["no", "en"]),
+            vol.Optional(CONF_TEST_MODE, default=False): cv.boolean,
+        }
+        
+        # Only show CAP format option for NVE warnings (not MetAlerts)
+        # This is determined by checking if a warning type was previously selected
+        # On first display, show the option (user hasn't selected MetAlerts yet)
+        schema_dict[vol.Optional(CONF_CAP_FORMAT, default=True)] = cv.boolean
+        
+        schema_dict[vol.Optional(CONF_ENABLE_NOTIFICATIONS, default=False)] = cv.boolean
+        schema_dict[vol.Optional(CONF_NOTIFICATION_SEVERITY, default=NOTIFICATION_SEVERITY_YELLOW_PLUS)] = vol.In(NOTIFICATION_SEVERITIES)
+        
+        data_schema = vol.Schema(schema_dict)
 
         return self.async_show_form(
             step_id="user",
@@ -172,6 +184,7 @@ class NorwayAlertsConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_WARNING_TYPE: warning_type,
                     CONF_LANG: self.context.get("lang", DEFAULT_LANG),
                     CONF_TEST_MODE: self.context.get("test_mode", False),
+                    CONF_CAP_FORMAT: self.context.get("cap_format", True),
                     CONF_ENABLE_NOTIFICATIONS: self.context.get("enable_notifications", False),
                     CONF_NOTIFICATION_SEVERITY: self.context.get("notification_severity", NOTIFICATION_SEVERITY_YELLOW_PLUS),
                 }
