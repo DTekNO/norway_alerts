@@ -1159,22 +1159,39 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def entity_picture(self):
-        """Return embedded Yr.no warning icon based on warning type and level."""
-        state = self.native_value
+        """Return embedded Yr.no warning icon based on warning type and level (worst case)."""
+        if not self.coordinator.data:
+            return None
         
-        # Determine warning type from coordinator data
+        # Apply municipality filter if this is the filtered sensor
+        data_to_use = self._filter_alerts(self.coordinator.data) if self._use_filter else self.coordinator.data
+        
+        # Filter out green level (1) and unknown level (0) alerts - same as native_value
+        active_alerts = [
+            alert for alert in data_to_use
+            if alert.get("ActivityLevel", "1") not in ("0", "1")
+        ]
+        
+        if not active_alerts:
+            return None
+        
+        # Find highest alert level from active alerts
+        max_level = 0
         warning_type = None
-        if self.coordinator.data:
-            for alert in self.coordinator.data:
-                alert_warning_type = alert.get("_warning_type", "")
-                if alert_warning_type:
-                    warning_type = alert_warning_type
-                    break
+        
+        for alert in active_alerts:
+            level = int(alert.get("ActivityLevel", "1"))
+            if level > max_level:
+                max_level = level
+                warning_type = alert.get("_warning_type", "")
+        
+        if max_level < 2 or not warning_type:
+            return None
         
         # Map level to color
-        level_color = ACTIVITY_LEVEL_NAMES.get(state)
+        level_color = ACTIVITY_LEVEL_NAMES.get(str(max_level))
         
-        if not level_color or level_color == "green" or not warning_type:
+        if not level_color or level_color == "green":
             return None
         
         # Get base64 encoded SVG from const
