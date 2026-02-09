@@ -5,6 +5,14 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.1]
+
+### Changed
+- **Event Name Translations** - Refined translations to match official Met.no CAP documentation
+  - English: "Forest fire" → "Forest fire danger", "Wind" → "Vindkast"
+  - Norwegian: "Skogbrann" → "Skogbrannfare", "Lyn" → "Mye lyn", "Polarlågtrykksvarsling" → "Polart lavtrykk"
+  - Maintained readable translations for stormSurge: "Storm surge" / "Stormflo"
+
 ## [2.3.0]
 
 - **Norwegian Language Support** - Full Norwegian translations
@@ -12,7 +20,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Norwegian translations for config flow UI (no.json)
   - Automatic language detection based on sensor configuration
   - Norwegian date/time formatting (e.g., "Torsdag, 05. februar kl. 23:00")
-  - Event name translations (e.g., "blowingSnow" → "Snøfokk" / "Blowing snow")
+  - Event name translations using official Met.no CAP v.1 Profile documentation
+  - Examples: "blowingSnow" → "Snøfokk" / "Blowing snow", "forestFire" → "Skogbrannfare" / "Forest fire danger"
 
 ## [2.2.0] - 2026-01-23
 
