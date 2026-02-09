@@ -5,6 +5,15 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0]
+
+- **Norwegian Language Support** - Full Norwegian translations
+  - Norwegian template (formatted_content_no.j2) with translated headings
+  - Norwegian translations for config flow UI (no.json)
+  - Automatic language detection based on sensor configuration
+  - Norwegian date/time formatting (e.g., "Torsdag, 05. februar kl. 23:00")
+  - Event name translations (e.g., "blowingSnow" → "Snøfokk" / "Blowing snow")
+
 ## [2.2.0] - 2026-01-23
 
 ### Added
@@ -15,6 +24,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Configurable display options: show_icon, show_status, show_map
   - Includes alert status (Expected/Ongoing/Ended), severity, descriptions, instructions, consequences
   - No template logic required in dashboard cards
+- **Compact View Toggle** - Switch entity for toggling between compact and full view
+  - Compact view: All alert icons in a single row
+  - Full view: Detailed information for each alert
+  - Automatic detection and re-linking on entity rename
+
+
+### Changed
+- **CAP Format Option** - Hidden for weather alerts in config flow
+  - Only shown for NVE warnings (landslide, flood, avalanche)
+  - MetAlerts are always in CAP format (option not applicable)
 
 ## [2.1.0] - 2026-01-13
 

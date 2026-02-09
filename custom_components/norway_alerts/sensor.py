@@ -1,6 +1,6 @@
 """Norway Alerts sensor platform."""
 import logging
-from datetime import timedelta
+from datetime import datetime, timedelta
 import os
 
 import voluptuous as vol
@@ -20,6 +20,7 @@ from homeassistant.helpers.update_coordinator import (
 
 from .const import (
     DOMAIN,
+    DEFAULT_LANG,
     CONF_LANG,
     CONF_COUNTY_ID,
     CONF_COUNTY_NAME,
@@ -52,12 +53,16 @@ _LOGGER = logging.getLogger(__name__)
 SCAN_INTERVAL = timedelta(minutes=30)
 
 
-async def _async_load_template(hass: HomeAssistant) -> str | None:
-    """Load Jinja2 template file asynchronously."""
+async def _async_load_template(hass: HomeAssistant, lang: str = "en") -> str | None:
+    """Load Jinja2 template file asynchronously based on language."""
     try:
+        # Choose template based on language
+        template_name = "formatted_content_no.j2" if lang == "no" else "formatted_content.j2"
         template_path = os.path.join(
-            os.path.dirname(__file__), "templates", "formatted_content.j2"
+            os.path.dirname(__file__), "templates", template_name
         )
+        
+        _LOGGER.info("Loading template for language '%s': %s", lang, template_name)
         
         # Use executor to read file without blocking event loop
         def _read_template():
@@ -65,12 +70,13 @@ async def _async_load_template(hass: HomeAssistant) -> str | None:
                 return f.read()
         
         content = await hass.async_add_executor_job(_read_template)
-        _LOGGER.debug("Successfully loaded formatted_content.j2 template")
+        _LOGGER.info("Successfully loaded %s template (%d characters)", template_name, len(content))
         return content
         
     except Exception as err:
         _LOGGER.error(
-            "Failed to load formatted_content.j2 template: %s. Formatted content will not be available.",
+            "Failed to load template for language '%s': %s. Formatted content will not be available.",
+            lang,
             err,
             exc_info=True
         )
@@ -229,11 +235,15 @@ async def async_setup_entry(
     
     _LOGGER.debug("Setting up sensor for entry %s", entry.entry_id)
     
-    # Load Jinja2 template asynchronously to avoid blocking I/O
-    template_content = await _async_load_template(hass)
-    
     # Get config from entry.options (preferred) or entry.data (fallback)
     config = entry.options if entry.options else entry.data
+    lang = config.get(CONF_LANG) or entry.data.get(CONF_LANG, DEFAULT_LANG)
+    
+    _LOGGER.info("Setting up sensor with language: %s (from options: %s, from data: %s)", 
+                 lang, config.get(CONF_LANG), entry.data.get(CONF_LANG))
+    
+    # Load Jinja2 template asynchronously to avoid blocking I/O
+    template_content = await _async_load_template(hass, lang)
     
     warning_type = config.get(CONF_WARNING_TYPE) or entry.data.get(CONF_WARNING_TYPE)
     municipality_filter = config.get(CONF_MUNICIPALITY_FILTER, "")
@@ -632,9 +642,87 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         # Store pre-loaded template content (loaded async in async_setup_entry)
         self._template_content = template_content
         self._formatted_content_template = None
-        self._compact_view_switch_entity_id = None  # Will be set in async_added_to_hass
         if template_content:
             self._compile_template(template_content)
+    
+    def _format_datetime_norwegian(self, dt: datetime) -> str:
+        """Format datetime in Norwegian."""
+        # Norwegian day names
+        norwegian_days = {
+            0: "mandag",
+            1: "tirsdag",
+            2: "onsdag",
+            3: "torsdag",
+            4: "fredag",
+            5: "lørdag",
+            6: "søndag"
+        }
+        
+        # Norwegian month names
+        norwegian_months = {
+            1: "januar",
+            2: "februar",
+            3: "mars",
+            4: "april",
+            5: "mai",
+            6: "juni",
+            7: "juli",
+            8: "august",
+            9: "september",
+            10: "oktober",
+            11: "november",
+            12: "desember"
+        }
+        
+        day_name = norwegian_days[dt.weekday()].capitalize()
+        month_name = norwegian_months[dt.month]
+        
+        return f"{day_name}, {dt.day:02d}. {month_name} kl. {dt.strftime('%H:%M')}"
+    
+    def _translate_event_name(self, event_token: str) -> str:
+        """Translate event name from camelCase token to display name based on language.
+        
+        Official Met.no MetAlerts event types (from API documentation):
+        blowingSnow, forestFire, gale, ice, icing, lightning, polarLow, 
+        rain, rainFlood, snow, stormSurge, wind
+        """
+        # English translations - Met.no MetAlerts event types
+        event_names_en = {
+            "blowingSnow": "Blowing snow",
+            "forestFire": "Forest fire",
+            "gale": "Gale",
+            "ice": "Ice",
+            "icing": "Icing",
+            "lightning": "Lightning",
+            "polarLow": "Polar low",
+            "rain": "Rain",
+            "rainFlood": "Rain flood",
+            "snow": "Snow",
+            "stormSurge": "Storm surge",
+            "wind": "Wind",
+        }
+        
+        # Norwegian translations - Met.no MetAlerts event types
+        event_names_no = {
+            "blowingSnow": "Snøfokk",
+            "forestFire": "Skogbrann",
+            "gale": "Kuling",
+            "ice": "Is",
+            "icing": "Ising",
+            "lightning": "Lyn",
+            "polarLow": "Polarlågtrykksvarsling",
+            "rain": "Regn",
+            "rainFlood": "Regnflom",
+            "snow": "Snø",
+            "stormSurge": "Stormflo",
+            "wind": "Vind",
+        }
+        
+        # Choose translation based on language
+        translations = event_names_no if self.coordinator.lang == "no" else event_names_en
+        
+        # Return translated name or original if no translation found
+        return translations.get(event_token, event_token)
     
     def _compile_template(self, template_string: str):
         """Compile Jinja2 template from string (no file I/O)."""
@@ -649,76 +737,6 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 exc_info=True
             )
             self._formatted_content_template = None
-    
-    async def async_added_to_hass(self) -> None:
-        """Register callbacks when entity is added to hass."""
-        await super().async_added_to_hass()
-        
-        _LOGGER.info("Setting up compact view listener for sensor: %s", self.entity_id)
-        
-        # Find and link the switch entity
-        self._setup_switch_listener()
-        
-        # Listen for entity registry changes to detect switch renames
-        from homeassistant.helpers.event import async_track_entity_registry_updated_event
-        
-        async def _entity_registry_updated(event):
-            """Handle entity registry updates."""
-            # Re-link if entities in our device changed
-            if event.data.get("action") in ["update", "create"]:
-                old_switch = self._compact_view_switch_entity_id
-                self._setup_switch_listener()
-                if old_switch != self._compact_view_switch_entity_id:
-                    _LOGGER.info("Switch entity ID changed from %s to %s, re-linked automatically", 
-                                old_switch, self._compact_view_switch_entity_id)
-        
-        self.async_on_remove(
-            async_track_entity_registry_updated_event(
-                self.hass, self.entity_id, _entity_registry_updated
-            )
-        )
-    
-    def _setup_switch_listener(self):
-        """Find the switch entity and set up state change listener."""
-        from homeassistant.helpers import entity_registry as er
-        from homeassistant.helpers.event import async_track_state_change_event
-        
-        entity_reg = er.async_get(self.hass)
-        
-        # Find all entities in the same device
-        device_id = entity_reg.async_get(self.entity_id).device_id if entity_reg.async_get(self.entity_id) else None
-        
-        if device_id:
-            # Find the switch entity in the same device
-            switch_entity_id = None
-            for entry in entity_reg.entities.values():
-                if entry.device_id == device_id and entry.domain == "switch" and "compact_view" in entry.unique_id:
-                    switch_entity_id = entry.entity_id
-                    break
-            
-            if switch_entity_id:
-                _LOGGER.info("Found compact view switch: %s for sensor: %s", switch_entity_id, self.entity_id)
-                
-                # Store the switch entity ID for use in rendering
-                self._compact_view_switch_entity_id = switch_entity_id
-                
-                async def _switch_state_changed(event):
-                    """Handle switch state changes."""
-                    _LOGGER.info("Compact view switch changed for %s, triggering sensor update", self.entity_id)
-                    self.async_write_ha_state()
-                
-                self.async_on_remove(
-                    async_track_state_change_event(
-                        self.hass, [switch_entity_id], _switch_state_changed
-                    )
-                )
-                _LOGGER.info("✓ Compact view toggle ready for %s -> %s", self.entity_id, switch_entity_id)
-            else:
-                _LOGGER.warning("Could not find compact view switch in device %s", device_id)
-                self._compact_view_switch_entity_id = None
-        else:
-            _LOGGER.warning("Could not determine device_id for sensor %s", self.entity_id)
-            self._compact_view_switch_entity_id = None
     
     def _add_metalert_attributes(self, alert_dict: dict, alert: dict) -> None:
         """Add MetAlerts-specific attributes to alert dict."""
@@ -847,8 +865,12 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         _LOGGER.info("Filtered to %d alerts matching '%s'", len(filtered), self._municipality_filter)
         return filtered
 
-    def _generate_formatted_content(self, alerts):
+    def _generate_formatted_content(self, alerts, compact=False):
         """Generate markdown-formatted content for display using cached Jinja2 template.
+        
+        Args:
+            alerts: List of alerts to format
+            compact: If True, generate compact view (icons only), otherwise full details
         
         Only generates content for CAP-formatted alerts (weather alerts or NVE with CAP enabled).
         Returns None for non-CAP sensors or if template failed to load.
@@ -877,6 +899,10 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             for alert in alerts:
                 enriched = dict(alert)
                 
+                # Translate event name from camelCase token to display name
+                if "event" in enriched:
+                    enriched["event"] = self._translate_event_name(enriched["event"])
+                
                 # Parse timestamps
                 starttime = alert.get("starttime", "")
                 endtime = alert.get("endtime", "")
@@ -886,8 +912,14 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                         end_dt = datetime.fromisoformat(endtime.replace("Z", "+00:00"))
                         enriched["starttime_timestamp"] = start_dt.timestamp()
                         enriched["endtime_timestamp"] = end_dt.timestamp()
-                        enriched["start_formatted"] = start_dt.strftime("%A, %d %B kl. %H:%M")
-                        enriched["end_formatted"] = end_dt.strftime("%A, %d %B kl. %H:%M")
+                        
+                        # Format dates based on language
+                        if self.coordinator.lang == "no":
+                            enriched["start_formatted"] = self._format_datetime_norwegian(start_dt)
+                            enriched["end_formatted"] = self._format_datetime_norwegian(end_dt)
+                        else:
+                            enriched["start_formatted"] = start_dt.strftime("%A, %d %B kl. %H:%M")
+                            enriched["end_formatted"] = end_dt.strftime("%A, %d %B kl. %H:%M")
                     except (ValueError, AttributeError) as err:
                         _LOGGER.debug("Failed to parse timestamps for alert: %s", err)
                         pass
@@ -902,20 +934,6 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 
                 enriched_alerts.append(enriched)
             
-            # Check switch state for debugging
-            # Use the stored switch entity_id if available, otherwise construct it
-            switch_entity_id = self._compact_view_switch_entity_id or (
-                f"switch.{self.entity_id.split('.')[1]}_compact_view" if self.entity_id else None
-            )
-            switch_state = self.hass.states.get(switch_entity_id) if switch_entity_id else None
-            switch_state_value = switch_state.state if switch_state else "NOT_FOUND"
-            compact_mode = switch_state_value == 'on'
-            
-            _LOGGER.info(
-                "Rendering formatted_content: sensor=%s, switch=%s, switch_state=%s, compact_mode=%s",
-                self.entity_id, switch_entity_id, switch_state_value, compact_mode
-            )
-            
             # Render using cached template (no blocking I/O)
             return self._formatted_content_template.render(
                 alerts=enriched_alerts,
@@ -923,9 +941,7 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 show_status=show_status,
                 show_map=show_map,
                 now_timestamp=datetime.now().timestamp(),
-                entity_id=self.entity_id,
-                switch_entity_id=switch_entity_id,  # Pass the actual switch entity_id
-                states=self.hass.states.get
+                compact_view=compact
             )
             
         except Exception as err:
@@ -1120,7 +1136,8 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             "highest_level": ACTIVITY_LEVEL_NAMES.get(str(max_level), "green"),
             "highest_level_numeric": max_level,
             "alerts": alerts_list,
-            "formatted_content": self._generate_formatted_content(alerts_list),
+            "formatted_content": self._generate_formatted_content(alerts_list, compact=False),
+            "formatted_summary": self._generate_formatted_content(alerts_list, compact=True),
         }
         
         # Add location-specific attributes
@@ -1142,32 +1159,164 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def entity_picture(self):
-        """Return embedded Yr.no warning icon based on warning type and level."""
-        state = self.native_value
+        """Return embedded Yr.no warning icon based on warning type and level.
         
-        # Determine warning type from coordinator data
-        warning_type = None
-        if self.coordinator.data:
-            for alert in self.coordinator.data:
-                alert_warning_type = alert.get("_warning_type", "")
-                if alert_warning_type:
-                    warning_type = alert_warning_type
-                    break
-        
-        # Map level to color
-        level_color = ACTIVITY_LEVEL_NAMES.get(state)
-        
-        if not level_color or level_color == "green" or not warning_type:
+        Shows:
+        - Green icon when state = 0 (no active alerts)
+        - Stacked icons when multiple alerts (up to 3)
+        - Single icon for one alert
+        """
+        if not self.coordinator.data:
             return None
         
-        # Get base64 encoded SVG from const
-        icon_key = f"{warning_type}-{level_color}"
-        icon = ICON_DATA_URLS.get(icon_key)
+        # Apply municipality filter if this is the filtered sensor
+        data_to_use = self._filter_alerts(self.coordinator.data) if self._use_filter else self.coordinator.data
         
-        # Fall back to generic icon if specific type not found
-        if not icon:
-            generic_key = f"generic-{level_color}"
-            icon = ICON_DATA_URLS.get(generic_key)
-            _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
+        # Filter out green level (1) and unknown level (0) alerts - same as native_value
+        active_alerts = [
+            alert for alert in data_to_use
+            if alert.get("ActivityLevel", "1") not in ("0", "1")
+        ]
         
-        return icon
+        # Show green icon if no active alerts
+        if not active_alerts:
+            return ICON_DATA_URLS.get("generic-green")
+        
+        # Get unique alerts (by warning type and level)
+        alert_icons = []
+        seen = set()
+        
+        for alert in active_alerts:
+            level = int(alert.get("ActivityLevel", "1"))
+            warning_type = alert.get("_warning_type", "")
+            
+            if level < 2:
+                continue
+                
+            # Create unique key
+            key = f"{warning_type}-{level}"
+            if key in seen:
+                continue
+            seen.add(key)
+            
+            # Get level color
+            level_color = ACTIVITY_LEVEL_NAMES.get(str(level))
+            if not level_color or level_color == "green":
+                continue
+            
+            # Try to get specific icon
+            icon_key = f"{warning_type}-{level_color}"
+            icon_data = ICON_DATA_URLS.get(icon_key)
+            
+            # Fall back to generic if not found
+            if not icon_data:
+                generic_key = f"generic-{level_color}"
+                icon_data = ICON_DATA_URLS.get(generic_key)
+                _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
+            
+            if icon_data:
+                alert_icons.append((level, icon_data))
+        
+        if not alert_icons:
+            return None
+        
+        # Sort by level (lowest first) so highest severity is drawn last (on top)
+        # Limit to 10 to avoid performance issues
+        alert_icons.sort(key=lambda x: x[0])  # Ascending order - lowest first
+        alert_icons = alert_icons[:10]
+        
+        # Single alert - return the icon directly
+        if len(alert_icons) == 1:
+            return alert_icons[0][1]
+        
+        # Multiple alerts - create composite SVG
+        return self._create_composite_icon([icon[1] for icon in alert_icons])
+    
+    def _create_composite_icon(self, icon_data_urls):
+        """Create a composite SVG with multiple icons stacked horizontally.
+        
+        Icons are offset horizontally by 25% to show multiple warnings.
+        Uses 512px resolution for better quality. Height remains constant while width grows.
+        """
+        import base64
+        from html import unescape
+        
+        try:
+            # Use 512px resolution for high quality display
+            base_size = 512
+            offset = base_size // 4  # 25% horizontal overlap (128px)
+            width = base_size + (len(icon_data_urls) - 1) * offset
+            height = base_size  # Keep height constant
+            
+            svg_parts = [f'<svg viewBox="0 0 {width} {height}" xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}">']
+            
+            for i, data_url in enumerate(icon_data_urls):
+                # Extract base64 part
+                if "base64," not in data_url:
+                    continue
+                    
+                base64_data = data_url.split("base64,")[1]
+                svg_content = base64.b64decode(base64_data).decode("utf-8")
+                
+                # Parse the SVG and embed it as a group with horizontal offset only
+                x_offset = i * offset
+                
+                # Extract content between <svg...> and </svg>
+                start_idx = svg_content.find(">") + 1
+                end_idx = svg_content.rfind("</svg>")
+                
+                if start_idx > 0 and end_idx > start_idx:
+                    inner_svg = svg_content[start_idx:end_idx]
+                    # Scale up from 48px to 512px (10.67x) and translate
+                    scale = base_size / 48.0
+                    svg_parts.append(f'<g transform="translate({x_offset}, 0) scale({scale})">{inner_svg}</g>')
+            
+            svg_parts.append("</svg>")
+            composite_svg = "".join(svg_parts)
+            
+            # Encode back to data URL
+            encoded = base64.b64encode(composite_svg.encode("utf-8")).decode("utf-8")
+            return f"data:image/svg+xml;base64,{encoded}"
+            
+        except Exception as e:
+            _LOGGER.warning("Failed to create composite icon: %s", e)
+            # Fall back to first icon
+            return icon_data_urls[0] if icon_data_urls else None
+    
+    @property
+    def icon(self):
+        """Return the icon for the sensor."""
+        return "mdi:alert"
+    
+    @property
+    def icon_color(self):
+        """Return the color based on highest alert level."""
+        state = self.native_value
+        
+        if state == 0:
+            return None  # No alerts - default color
+        
+        # Get highest level from coordinator data
+        if not self.coordinator.data:
+            return None
+        
+        data_to_use = self._filter_alerts(self.coordinator.data) if self._use_filter else self.coordinator.data
+        active_alerts = [
+            alert for alert in data_to_use
+            if alert.get("ActivityLevel", "1") not in ("0", "1")
+        ]
+        
+        if not active_alerts:
+            return None
+        
+        max_level = max(int(alert.get("ActivityLevel", "1")) for alert in active_alerts)
+        
+        # Map levels to Home Assistant state colors
+        level_colors = {
+            2: "yellow",   # Yellow (Moderate)
+            3: "orange",   # Orange (Severe)
+            4: "red",      # Red (Extreme)
+            5: "red",      # Purple/Extreme (use red)
+        }
+        
+        return level_colors.get(max_level)

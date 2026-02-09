@@ -8,8 +8,16 @@
           "warning_type": "Warning Type",
           "lang": "Language",
           "test_mode": "Test Mode (inject fake alerts)",
+          "cap_format": "CAP Format (for templates)",
           "enable_notifications": "Enable Notifications",
           "notification_severity": "Notification Severity Threshold"
+        }
+      },
+      "metalerts_mode": {
+        "title": "Weather Alerts Location Mode",
+        "description": "Choose how to filter weather alerts",
+        "data": {
+          "metalerts_location_mode": "Location Mode"
         }
       },
       "location": {
@@ -46,8 +54,13 @@
           "latitude": "Latitude",
           "longitude": "Longitude",
           "test_mode": "Test Mode (inject fake alerts)",
+          "cap_format": "CAP Format (for templates)",
           "enable_notifications": "Enable Notifications",
-          "notification_severity": "Notification Severity Threshold"
+          "notification_severity": "Notification Severity Threshold",
+          "metalerts_location_mode": "Location Mode",
+          "show_icon": "Show Icon",
+          "show_status": "Show Status",
+          "show_map": "Show Map"
         }
       }
     },

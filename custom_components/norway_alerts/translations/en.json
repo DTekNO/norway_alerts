@@ -3,38 +3,71 @@
     "step": {
       "user": {
         "title": "Set up Norway Alerts",
-        "description": "Configure Norway Alerts to receive landslide and flood warnings from NVE",
+        "description": "Configure warning type and notification settings",
         "data": {
-          "county_id": "County",
           "warning_type": "Warning Type",
           "lang": "Language",
-          "municipality_filter": "Municipality Filter (optional, comma-separated)"
+          "test_mode": "Test Mode (inject fake alerts)",
+          "cap_format": "CAP Format (for templates)",
+          "enable_notifications": "Enable Notifications",
+          "notification_severity": "Notification Severity Threshold"
+        }
+      },
+      "metalerts_mode": {
+        "title": "Weather Alerts Location Mode",
+        "description": "Choose how to filter weather alerts",
+        "data": {
+          "metalerts_location_mode": "Location Mode"
+        }
+      },
+      "location": {
+        "title": "Configure Alert Location",
+        "description": "Enter location details for {warning_type} warnings",
+        "data": {
+          "county_id": "County",
+          "municipality_filter": "Municipality Filter (optional, comma-separated)",
+          "latitude": "Latitude",
+          "longitude": "Longitude"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to NVE/Varsom API. Please check your settings and try again.",
+      "cannot_connect": "Failed to connect to API. Please check your settings and try again.",
+      "missing_county": "County is required for this warning type.",
+      "missing_location": "Latitude and longitude are required for weather alerts.",
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This county and warning type combination is already configured"
+      "already_configured": "This location and warning type combination is already configured"
     }
   },
   "options": {
     "step": {
       "init": {
-        "title": "Update Norway Alerts configuration",
-        "description": "Update the configuration for this Norway Alerts instance",
+        "title": "Update Norway Alerts Configuration",
+        "description": "Update settings for this alert sensor",
         "data": {
           "county_id": "County",
           "warning_type": "Warning Type",
           "lang": "Language",
-          "municipality_filter": "Municipality Filter (optional, comma-separated)"
+          "municipality_filter": "Municipality Filter (optional, comma-separated)",
+          "latitude": "Latitude",
+          "longitude": "Longitude",
+          "test_mode": "Test Mode (inject fake alerts)",
+          "cap_format": "CAP Format (for templates)",
+          "enable_notifications": "Enable Notifications",
+          "notification_severity": "Notification Severity Threshold",
+          "metalerts_location_mode": "Location Mode",
+          "show_icon": "Show Icon",
+          "show_status": "Show Status",
+          "show_map": "Show Map"
         }
       }
     },
     "error": {
-      "cannot_connect": "Failed to connect to NVE/Varsom API. Please check your settings and try again.",
+      "cannot_connect": "Failed to connect to API. Please check your settings and try again.",
+      "missing_county": "County is required for this warning type.",
+      "missing_location": "Latitude and longitude are required for weather alerts.",
       "unknown": "Unexpected error occurred"
     }
   }

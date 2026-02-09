@@ -24,12 +24,14 @@ All warnings unified in a clean, modern Home Assistant interface with automatic 
 - **Flexible configuration** - One sensor per warning type for clean separation
 - **Multiple location types** - County-based (NVE) or coordinates-based (Met.no)
 - **Activity levels** - Green (1), Yellow (2), Orange (3), Red (4), Black (5 for avalanche)
-- **Included blueprints** - Pre-built templates for displaying alerts (see [BLUEPRINTS.md](BLUEPRINTS.md))
+- **Pre-formatted attributes** - `formatted_content` (full details) and `formatted_summary` (icon-only compact view)
 - **CAP format support** - Optional conversion of NVE warnings to CAP standard for unified display
 - **Rich alert data** - Warning text, advice, consequences, affected areas, validity periods
 - **Direct links** - Each alert links to detailed maps and information
 - **Bilingual** - Full Norwegian and English support
-- **Official Yr.no icons** - Embedded warning icons (no setup required)
+- **High-res warning icons** - Official Yr.no icons embedded at 512px resolution
+- **Composite icon display** - Multiple alerts shown as horizontally stacked icons (up to 10)
+- **Smart layering** - Highest severity alerts appear on top in entity badges
 - **Municipality filtering** - Filter NVE alerts to specific municipalities
 - **Test mode** - Generate fake alerts for testing dashboards and automations
 - **Persistent notifications** - Optional notifications for new or changed alerts
@@ -232,11 +234,12 @@ All sensors provide the following core attributes:
 active_alerts: 2          # Number of active alerts
 highest_level: "yellow"   # Color name of highest severity
 highest_level_numeric: 2  # Numeric level (1-4 or 1-5 for avalanche)
-formatted_content: "..."  # Formatted markdown for display (see Display Content section)
+formatted_content: "..."  # Full alert details with descriptions (CAP format only)
+formatted_summary: "..."  # Compact icon-only view (CAP format only)
 alerts: [...]             # Array of alert objects (see below)
 ```
 
-> **⚠️ Recorder Exclusion Recommended**: The `alerts` and `formatted_content` attributes can be quite large and may cause database bloat and log warnings. It's recommended to exclude these from the recorder. See [Recorder Configuration](#recorder-configuration) below.
+> **⚠️ Recorder Exclusion Recommended**: The `alerts`, `formatted_content`, and `formatted_summary` attributes can be quite large and may cause database bloat and log warnings. It's recommended to exclude these from the recorder. See [Recorder Configuration](#recorder-configuration) below.
 
 #### Geohazard Warnings (Landslide, Flood, Avalanche)
 
@@ -354,48 +357,88 @@ To override with your own icons:
 
 ## Display Content
 
-### Formatted Content Attribute
+### Formatted Content Attributes
 
-The integration automatically generates formatted markdown content in the `formatted_content` attribute using a built-in Jinja2 template, ready to display in markdown cards without any additional template logic.
+The integration automatically generates two pre-formatted markdown attributes for easy display:
 
-> **Note**: The `formatted_content` attribute is only available for **CAP-formatted alerts**:
+#### `formatted_content` - Full Details View
+Complete alert information with all details, ideal for dedicated alert cards:
+- Alert status (Expected/Ongoing/Ended) with visual indicators
+- Warning icons (if enabled)
+- Severity levels with color codes
+- Time periods with danger increase/decrease times
+- Full descriptions, instructions, and consequences
+- Affected areas and municipalities
+- Map images (if enabled)
+
+#### `formatted_summary` - Compact Icon View
+Minimalist view showing only alert icons in a horizontal row - perfect for dashboard headers or compact displays:
+- Warning icons only (color-coded by severity)
+- Horizontally arranged
+- No text, just visual indicators
+- Useful for at-a-glance status
+
+> **Note**: Both attributes are only available for **CAP-formatted alerts**:
 > - Weather alerts (Met.no) - always in CAP format
 > - NVE warnings (landslide, flood, avalanche) - only when "Enable CAP format" is checked during configuration
 > 
-> Non-CAP NVE sensors will not have this attribute. Create your own template sensor for those cases, or enable CAP formatting.
+> Non-CAP NVE sensors will not have these attributes. Create your own template sensor for those cases, or enable CAP formatting.
 
-#### Customization
-
-The `formatted_content` attribute provides a ready-to-use display format. If you need different formatting, you can create your own template sensor using the `alerts` attribute - see the [Markdown Card with Custom Template](#markdown-card-with-custom-template) example below.
-
-#### Configuration Options
+### Configuration Options
 
 You can customize what's included in the formatted content via **Settings** → **Devices & Services** → **Norway Alerts** → **Configure**:
 
-- **Show Icon** (`show_icon`): Include warning icons in the formatted output (default: `true`)
-- **Show Status** (`show_status`): Show "Expected", "Ongoing", or "Ended" status for each alert (default: `true`)
+- **Show Icon** (`show_icon`): Include warning icons in formatted output (default: `true`)
+- **Show Status** (`show_status`): Show "Expected", "Ongoing", or "Ended" status (default: `true`)  
 - **Show Map** (`show_map`): Include alert map images (default: `true`)
 
-These options are passed to the template and control which elements appear in the output.
+These options affect `formatted_content` but not `formatted_summary` (which always shows icons only).
 
-#### Usage Example
+### Usage Examples
 
-Display alerts directly in a markdown card:
-
+**Full details view:**
 ```yaml
 type: markdown
 content: >
   {{ state_attr('sensor.norway_alerts_landslide_vestland', 'formatted_content') }}
 ```
 
-That's it! No complex templates needed. The integration handles all the formatting, including:
-- Alert status (Expected/Ongoing/Ended)
-- Warning icons (if enabled)
-- Severity levels with color codes
-- Time periods with danger increase/decrease times
-- Descriptions, instructions, and consequences
-- Affected areas
-- Map images (if enabled)
+![Norwegian Forest Fire Alert](images/forestFire_example_no.png)
+
+*Norwegian language alert example*
+
+![English Forest Fire Alert](images/forestFire_example_en.png)
+
+*English language alert example - same data, different language*
+
+**Compact icons only:**
+```yaml
+type: markdown
+content: >
+  {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_summary') }}
+```
+
+**Combined view with toggle:**
+```yaml
+type: vertical-stack
+cards:
+  - type: markdown
+    content: >
+      {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_summary') }}
+  - type: conditional
+    conditions:
+      - condition: numeric_state
+        entity: sensor.norway_alerts_metalerts_vestland
+        above: 0
+    card:
+      type: markdown
+      content: >
+        {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
+```
+
+### Custom Formatting
+
+If you need different formatting, you can create your own template sensor using the `alerts` attribute - see the [Markdown Card with Custom Template](#markdown-card-with-custom-template) example below.
 
 ---
 
@@ -403,7 +446,7 @@ That's it! No complex templates needed. The integration handles all the formatti
 
 ### Large Attributes Warning
 
-The `alerts` and `formatted_content` attributes can be quite large (especially with multiple active alerts) and may cause:
+The `alerts`, `formatted_content`, and `formatted_summary` attributes can be quite large (especially with multiple active alerts) and may cause:
 - Database bloat
 - Log warnings about entity size
 - Slower recorder performance
@@ -443,76 +486,6 @@ Unfortunately, Home Assistant's recorder does not support excluding specific att
 
 The integration works with all standard Home Assistant cards and custom cards from HACS.
 
-### Compact View Toggle
-
-The integration automatically creates a **Compact View** switch for each alert sensor. This allows you to toggle between:
-- **Compact view** (switch ON): Shows all alert icons in a single row - perfect for dashboard overviews
-- **Full view** (switch OFF - default): Shows complete alert details including descriptions, instructions, and maps
-
-Both entities are linked in the same device, making them easy to find together.
-
-**Finding Your Entity IDs:**
-1. Go to Settings → Devices & Services → Norway Alerts
-2. Click on your location/region device
-3. Note both entity IDs (the sensor and the switch)
-
-The sensor automatically detects if the switch is renamed and re-links without requiring a restart.
-
-**Note:** Standard markdown cards do not support tap actions. To toggle the view, you'll need either a separate toggle control (shown below) or a custom card from HACS that adds tap action support.
-
-#### Example: Entities Card with Toggle (Recommended)
-
-Most compact approach using only standard cards:
-
-```yaml
-type: vertical-stack
-cards:
-  - type: entities
-    entities:
-      - entity: switch.vestland_weather_alerts_compact_view  # Your switch entity ID
-        name: Compact View
-  - type: markdown
-    content: >
-      {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
-```
-
-#### Example: Button Toggle
-
-Alternative with a button control:
-
-```yaml
-type: vertical-stack
-cards:
-  - type: button
-    entity: switch.vestland_weather_alerts_compact_view
-    name: Toggle Alert View
-    icon: mdi:view-compact
-    tap_action:
-      action: toggle
-  - type: markdown
-    content: >
-      {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
-```
-
-#### Example: Custom Card with Tap Action (Advanced)
-
-For tap-to-toggle on the markdown card itself, install the **Actions Card** from HACS:
-
-**Requirements:** Install [actions-card](https://github.com/nutteloost/actions-card) from HACS
-
-```yaml
-type: custom:actions-card
-entity: switch.vestland_weather_alerts_compact_view  # Your switch entity ID
-tap_action:
-  action: toggle
-card:
-  type: markdown
-  content: >
-    {{ state_attr('sensor.norway_alerts_metalerts_vestland', 'formatted_content') }}
-```
-
-This wraps the markdown card with tap action support, allowing you to tap anywhere to toggle between compact and full views.
-
 ---
 
 ## Usage Examples
@@ -528,6 +501,83 @@ entities:
   - entity: sensor.norway_alerts_landslide_vestland
     name: Vestland Alert Level
 ```
+
+#### Badge Cards with Icons
+
+Display compact alert badges that only appear when alerts are active. The badges show:
+- **Entity picture**: Colored warning icons (yellow/orange/red) based on severity
+- **Multiple alerts**: Icons stack horizontally at high resolution (512px)
+- **State count**: Number of active alerts
+- **Auto-hide**: Disappears when no alerts (visibility condition)
+
+```yaml
+type: horizontal-stack
+cards:
+  - type: custom:mushroom-chips-card
+    chips:
+      - type: entity
+        entity: sensor.norway_alerts_metalerts_vestland
+        use_entity_picture: true
+        tap_action:
+          action: more-info
+      - type: entity
+        entity: sensor.norway_alerts_flood_vestland
+        use_entity_picture: true
+        tap_action:
+          action: more-info
+      - type: entity
+        entity: sensor.norway_alerts_landslide_vestland
+        use_entity_picture: true
+        tap_action:
+          action: more-info
+```
+
+**Alternative: Standard Badge Card** (no custom cards required):
+
+```yaml
+badges:
+  - type: entity
+    show_name: false
+    show_state: true
+    show_icon: true
+    entity: sensor.norway_alerts_metalerts_vestland
+    show_entity_picture: true
+    visibility:
+      - condition: numeric_state
+        entity: sensor.norway_alerts_metalerts_vestland
+        above: 0
+  - type: entity
+    show_name: false
+    show_state: true
+    show_icon: true
+    entity: sensor.norway_alerts_flood_vestland
+    show_entity_picture: true
+    visibility:
+      - condition: numeric_state
+        entity: sensor.norway_alerts_flood_vestland
+        above: 0
+  - type: entity
+    show_name: false
+    show_state: true
+    show_icon: true
+    entity: sensor.norway_alerts_landslide_vestland
+    show_entity_picture: true
+    visibility:
+      - condition: numeric_state
+        entity: sensor.norway_alerts_landslide_vestland
+        above: 0
+```
+
+![Badge Example](images/badges_example.png)
+
+*Example showing badge cards with warning icons*
+
+**Icon Display Features:**
+- **No alerts (state = 0)**: Green warning icon (informational)
+- **Single alert**: One colored icon matching severity level
+- **Multiple alerts**: Horizontally stacked icons (up to 10) with 25% overlap
+- **Z-ordering**: Highest severity drawn on top (most visible)
+- **High resolution**: 512px height for crisp display
 
 #### Markdown Card with Formatted Content
 

@@ -6,7 +6,7 @@
 <tr>
 {%- for alert in alerts %}
 <td width="70" align="center" valign="top">
-{%- if show_icon and alert.get('entity_picture') %}<img src="{{ alert.entity_picture }}" width="64" height="64" title="{{ alert.get('event', 'Alert') }} - {{ alert.get('severity', 'unknown') | capitalize }}">{% endif -%}
+{%- if show_icon and alert.get('entity_picture') %}<img src="{{ alert.entity_picture }}" width="64" height="64" title="{{ alert.get('event', 'Varsel') }} - {{ alert.get('severity', 'ukjent') | capitalize }}">{% endif -%}
 </td>
 {%- endfor %}
 </tr>
@@ -22,46 +22,46 @@
 <table role="presentation">
 <tr height="32">
 <td rowspan="2" width="70">{% if show_icon and alert.get('entity_picture') %}<img src="{{ alert.entity_picture }}" width="64" height="64">{% endif %}</td>
-<td height="32"><font size="3"><strong>{% if show_status and start_ts and end_ts %}{{ 'Expected' if start_ts > now_ts else ('Ended' if end_ts < now_ts else 'Ongoing') }} - {% endif %}{{ alert.get('event', 'Alert') }}</strong></font></td>
+<td height="32"><font size="3"><strong>{% if show_status and start_ts and end_ts %}{{ 'Forventet' if start_ts > now_ts else ('Avsluttet' if end_ts < now_ts else 'Pågående') }} - {% endif %}{{ alert.get('event', 'Varsel') }}</strong></font></td>
 </tr>
 <tr height="24">
-<td height="24">{{ alert.get('severity', 'unknown') | capitalize }} severity</td>
+<td height="24">{{ alert.get('severity', 'ukjent') | capitalize }} alvorlighetsgrad</td>
 </tr>
 </table>
 
 {%- if start_ts and end_ts %}
 
-#### Time period
+#### Tidsperiode
 
-🔵 {{ alert.start_formatted }} - increasing danger
+🔵 {{ alert.start_formatted }} - økende fare
 
-🔵 {{ alert.end_formatted }} - decreasing danger
+🔵 {{ alert.end_formatted }} - minkende fare
 {% endif -%}
 {%- if alert.get('description') %}
 
-#### Description
+#### Beskrivelse
 
 {{ alert.description }}
 {% endif -%}
 {%- if alert.get('instruction') %}
 
-#### Instructions
+#### Anbefalinger
 
 {{ alert.instruction }}
 {% endif -%}
 {%- if alert.get('consequences') %}
 
-#### Consequences
+#### Konsekvenser
 
 {{ alert.consequences }}
 
 {% endif -%}
 {%- if alert.get('area') %}
-**Area**: {{ alert.area }}
+**Område**: {{ alert.area }}
 
 {% endif -%}
 {%- if alert.get('certainty') or alert.get('severity') or alert.get('level_name') %}
-{%- if alert.get('certainty') %}**Certainty**: {{ alert.certainty }}{% endif -%}{%- if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif -%}{%- if alert.get('severity') or alert.get('level_name') %}**Severity**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif -%}
+{%- if alert.get('certainty') %}**Sannsynlighet**: {{ alert.certainty }}{% endif -%}{%- if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif -%}{%- if alert.get('severity') or alert.get('level_name') %}**Alvorlighetsgrad**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif -%}
 
 {% endif -%}
 ---
@@ -73,5 +73,5 @@
 {%- endfor -%}
 {%- endif -%}
 {%- else -%}
-No active alerts
+Ingen aktive varsler
 {%- endif -%}
