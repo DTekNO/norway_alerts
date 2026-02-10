@@ -12,6 +12,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - English: "Forest fire" → "Forest fire danger", "Wind" → "Vindkast"
   - Norwegian: "Skogbrann" → "Skogbrannfare", "Lyn" → "Mye lyn", "Polarlågtrykksvarsling" → "Polart lavtrykk"
   - Maintained readable translations for stormSurge: "Storm surge" / "Stormflo"
+- **💾 Recorder Optimization** - Excluded large attributes from state history
+  - `alerts`, `formatted_content`, `formatted_summary`, and `entity_picture` excluded from recorder
+  - Significantly reduces database size without losing functionality
+  - State and `active_alerts` still recorded for history graphs
+  - Follows Home Assistant best practices for attributes not suitable for history
 
 ## [2.3.0]
 

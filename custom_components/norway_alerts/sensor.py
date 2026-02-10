@@ -623,6 +623,8 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
 class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Norway Alerts sensor with all alerts in attributes."""
 
+    _unrecorded_attributes = frozenset({"formatted_content", "formatted_summary", "alerts", "entity_picture"})
+
     def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str, template_content: str | None, is_main: bool = True):
         """Initialize the sensor."""
         super().__init__(coordinator)
