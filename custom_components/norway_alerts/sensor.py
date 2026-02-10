@@ -619,6 +619,54 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error sending resolved notification: %s", err)
 
+    def _translate_event_name(self, event_token: str) -> str:
+        """Translate event name from camelCase token to display name based on language.
+        
+        Official Met.no MetAlerts event types (from CAP v.1 Profile documentation):
+        blowingSnow, forestFire, gale, ice, icing, lightning, polarLow, 
+        rain, rainFlood, snow, stormSurge, wind
+        
+        Translations match official Met.no CAP documentation table:
+        https://docs.api.met.no/doc/metalerts/CAP-v1-profile.html
+        """
+        # English translations - Official Met.no CAP v.1 Profile
+        event_names_en = {
+            "blowingSnow": "Blowing snow",
+            "forestFire": "Forest fire danger",
+            "gale": "Gale",
+            "ice": "Ice",
+            "icing": "Icing",
+            "lightning": "Lightning",
+            "polarLow": "Polar low",
+            "rain": "Rain",
+            "rainFlood": "Rain flood",
+            "snow": "Snow",
+            "stormSurge": "Storm surge",
+            "wind": "Vindkast",
+        }
+        
+        # Norwegian translations - Official Met.no CAP v.1 Profile
+        event_names_no = {
+            "blowingSnow": "Snøfokk",
+            "forestFire": "Skogbrannfare",
+            "gale": "Kuling",
+            "ice": "Is",
+            "icing": "Ising",
+            "lightning": "Mye lyn",
+            "polarLow": "Polart lavtrykk",
+            "rain": "Regn",
+            "rainFlood": "Styrtregn",
+            "snow": "Snø",
+            "stormSurge": "Stormflo",
+            "wind": "Vindkast",
+        }
+        
+        # Choose translation based on language
+        translations = event_names_no if self.lang == "no" else event_names_en
+        
+        # Return translated name or original if no translation found
+        return translations.get(event_token, event_token)
+
 
 class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Norway Alerts sensor with all alerts in attributes."""
