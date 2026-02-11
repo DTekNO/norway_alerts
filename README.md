@@ -239,7 +239,7 @@ formatted_summary: "..."  # Compact icon-only view (CAP format only)
 alerts: [...]             # Array of alert objects (see below)
 ```
 
-> **⚠️ Recorder Exclusion Recommended**: The `alerts`, `formatted_content`, and `formatted_summary` attributes can be quite large and may cause database bloat and log warnings. It's recommended to exclude these from the recorder. See [Recorder Configuration](#recorder-configuration) below.
+> **ℹ️ Database Optimization**: The `alerts`, `formatted_content`, `formatted_summary`, and `entity_picture` attributes are automatically excluded from recorder history to prevent database bloat. All data remains available in real-time.
 
 #### Geohazard Warnings (Landslide, Flood, Avalanche)
 
@@ -442,43 +442,31 @@ If you need different formatting, you can create your own template sensor using 
 
 ---
 
-## Recorder Configuration
+## Database & Performance
 
-### Large Attributes Warning
+### Automatic Recorder Optimization
 
-The `alerts`, `formatted_content`, and `formatted_summary` attributes can be quite large (especially with multiple active alerts) and may cause:
-- Database bloat
-- Log warnings about entity size
-- Slower recorder performance
+The integration automatically excludes large attributes from recorder history to prevent database bloat:
 
-Unfortunately, Home Assistant's recorder does not support excluding specific attributes - you can only exclude entire entities.
+**Excluded attributes:**
+- `alerts` - Full alert data array
+- `formatted_content` - Markdown formatted content
+- `formatted_summary` - Compact markdown summary
+- `entity_picture` - Base64-encoded icon images
 
-**Recommended approaches:**
+**Still recorded:**
+- `state` - Numeric alert count (for history graphs)
+- `active_alerts` - Count of active alerts
+- Entity metadata (names, IDs, etc.)
 
-1. **Exclude sensors from recorder** - Alert data is most valuable in real-time, not historically:
-   ```yaml
-   recorder:
-     exclude:
-       entity_globs:
-         - sensor.norway_alerts_*
-   ```
-   **Pros**: Eliminates database bloat and log warnings entirely  
-   **Cons**: No history graphs for alert levels (rarely needed for alerts)  
-   **Note**: All real-time data, automations, and dashboards work perfectly
+**Benefits:**
+- ✅ Prevents database bloat from large attributes
+- ✅ Keeps useful data (state, active alerts) for history graphs
+- ✅ All excluded attributes remain available in real-time
+- ✅ No manual recorder configuration needed
+- ✅ Automations and dashboards work perfectly
 
-2. **Live with it** - Keep sensors in recorder despite large attributes:
-   - The warnings are informational only
-   - As long as you have disk space, no action needed
-   - Useful if you want historical graphs of alert levels
-
-3. **Shorter purge interval** - Keep sensors but limit history:
-   ```yaml
-   recorder:
-     purge_keep_days: 3  # Instead of default 10
-   ```
-   Reduces database growth while maintaining some history
-
-> **Note**: Excluding from recorder only affects historical storage. All attributes remain available in real-time via `state_attr()`, dashboard cards, and automations.
+> **Note**: This follows Home Assistant best practices for attributes not suitable for state history. All data is always available in real-time via `state_attr()`, dashboard cards, and automations.
 
 ---
 

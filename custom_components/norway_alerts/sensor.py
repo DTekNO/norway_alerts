@@ -557,8 +557,13 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
             level_name = ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown")
             level_emoji = {"1": "🟢", "2": "🟡", "3": "🟠", "4": "🔴", "5": "⚫"}.get(activity_level, "⚪")
             
-            # Format warning type nicely
-            warning_type_display = warning_type.replace("_", " ").title()
+            # Format warning type nicely - use translation for MetAlerts event codes
+            # Check if it's a camelCase event code (MetAlerts) or underscore format (NVE)
+            if "_" in warning_type:
+                warning_type_display = warning_type.replace("_", " ").title()
+            else:
+                # Use translation for MetAlerts event codes (e.g., rainFlood -> Rain flood)
+                warning_type_display = self._translate_event_name(warning_type)
             
             # Create notification title and message
             title = f"{level_emoji} {status} {warning_type_display} Warning"
@@ -589,7 +594,12 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
     async def _send_resolved_notification(self, warning_type, region_name):
         """Send a notification for a resolved alert."""
         try:
-            warning_type_display = warning_type.replace("_", " ").title()
+            # Format warning type nicely - use translation for MetAlerts event codes
+            if "_" in warning_type:
+                warning_type_display = warning_type.replace("_", " ").title()
+            else:
+                # Use translation for MetAlerts event codes
+                warning_type_display = self._translate_event_name(warning_type)
             
             title = f"✅ Resolved {warning_type_display} Warning"
             message = f"{region_name} - Warning no longer active"
@@ -609,9 +619,59 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
         except Exception as err:
             _LOGGER.error("Error sending resolved notification: %s", err)
 
+    def _translate_event_name(self, event_token: str) -> str:
+        """Translate event name from camelCase token to display name based on language.
+        
+        Official Met.no MetAlerts event types (from CAP v.1 Profile documentation):
+        blowingSnow, forestFire, gale, ice, icing, lightning, polarLow, 
+        rain, rainFlood, snow, stormSurge, wind
+        
+        Translations match official Met.no CAP documentation table:
+        https://docs.api.met.no/doc/metalerts/CAP-v1-profile.html
+        """
+        # English translations - Official Met.no CAP v.1 Profile
+        event_names_en = {
+            "blowingSnow": "Blowing snow",
+            "forestFire": "Forest fire danger",
+            "gale": "Gale",
+            "ice": "Ice",
+            "icing": "Icing",
+            "lightning": "Lightning",
+            "polarLow": "Polar low",
+            "rain": "Rain",
+            "rainFlood": "Rain flood",
+            "snow": "Snow",
+            "stormSurge": "Storm surge",
+            "wind": "Vindkast",
+        }
+        
+        # Norwegian translations - Official Met.no CAP v.1 Profile
+        event_names_no = {
+            "blowingSnow": "Snøfokk",
+            "forestFire": "Skogbrannfare",
+            "gale": "Kuling",
+            "ice": "Is",
+            "icing": "Ising",
+            "lightning": "Mye lyn",
+            "polarLow": "Polart lavtrykk",
+            "rain": "Regn",
+            "rainFlood": "Styrtregn",
+            "snow": "Snø",
+            "stormSurge": "Stormflo",
+            "wind": "Vindkast",
+        }
+        
+        # Choose translation based on language
+        translations = event_names_no if self.lang == "no" else event_names_en
+        
+        # Return translated name or original if no translation found
+        return translations.get(event_token, event_token)
+
 
 class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Norway Alerts sensor with all alerts in attributes."""
+
+    _unrecorded_attributes = frozenset({"formatted_content", "formatted_summary", "alerts", "entity_picture"})
 
     def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str, template_content: str | None, is_main: bool = True):
         """Initialize the sensor."""

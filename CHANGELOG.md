@@ -5,6 +5,19 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.2]
+
+### Changed
+- **🎨 Enhanced Visual Layout** - Improved alert display with Home Assistant markdown card
+  - Banner-style `<ha-alert>` boxes for visual hierarchy
+  - Alert icons displayed in separate colored alert header (color based on severity)
+  - Severity-based coloring: Red (Severe/Extreme), Orange (Moderate/Minor), Blue (Unknown)
+  - Each alert shown in colored box with event name and status as title
+  - Time periods displayed in styled table (bold labels, italic values) within alert
+  - All alert details (description, instructions, consequences, area) contained within alert box
+  - Better visual alignment and background for comprehensive alert information
+  - Removed markdown headers (####) in favor of bold text within alerts
+
 ## [2.3.1]
 
 ### Changed
@@ -12,6 +25,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - English: "Forest fire" → "Forest fire danger", "Wind" → "Vindkast"
   - Norwegian: "Skogbrann" → "Skogbrannfare", "Lyn" → "Mye lyn", "Polarlågtrykksvarsling" → "Polart lavtrykk"
   - Maintained readable translations for stormSurge: "Storm surge" / "Stormflo"
+- **💾 Recorder Optimization** - Excluded large attributes from state history
+  - `alerts`, `formatted_content`, `formatted_summary`, and `entity_picture` excluded from recorder
+  - Significantly reduces database size without losing functionality
+  - State and `active_alerts` still recorded for history graphs
+  - Follows Home Assistant best practices for attributes not suitable for history
 
 ## [2.3.0]
 
