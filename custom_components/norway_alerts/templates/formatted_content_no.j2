@@ -18,60 +18,74 @@
 {%- set start_ts = alert.get('starttime_timestamp') -%}
 {%- set end_ts = alert.get('endtime_timestamp') -%}
 {%- set now_ts = now_timestamp -%}
+{%- set severity = alert.get('severity', 'ukjent') | lower -%}
+{%- set alert_type = 'error' if severity in ['severe', 'extreme'] else ('warning' if severity in ['moderate', 'minor'] else 'info') -%}
+{%- set status = 'Forventet' if start_ts and end_ts and start_ts > now_ts else ('Avsluttet' if start_ts and end_ts and end_ts < now_ts else 'Pågående') -%}
+{%- set title = (status ~ ' - ' if show_status and start_ts and end_ts else '') ~ alert.get('event', 'Varsel') -%}
 
-<table role="presentation">
-<tr height="32">
-<td rowspan="2" width="70">{% if show_icon and alert.get('entity_picture') %}<img src="{{ alert.entity_picture }}" width="64" height="64">{% endif %}</td>
-<td height="32"><font size="3"><strong>{% if show_status and start_ts and end_ts %}{{ 'Forventet' if start_ts > now_ts else ('Avsluttet' if end_ts < now_ts else 'Pågående') }} - {% endif %}{{ alert.get('event', 'Varsel') }}</strong></font></td>
-</tr>
-<tr height="24">
-<td height="24">{{ alert.get('severity', 'ukjent') | capitalize }} alvorlighetsgrad</td>
-</tr>
-</table>
+{%- if loop.index0 > 0 %}<br>
+{% endif %}
+
+{#- Ikonvarsel med alvorlighetsbasert farge -#}
+<ha-alert alert-type="{{ alert_type }}">
+{%- if show_icon and alert.get('entity_picture') %}
+<img src="{{ alert.entity_picture }}" width="64" height="64">
+{%- endif %}
+</ha-alert>
+
+{#- Hovedvarsel med alle detaljer -#}
+<ha-alert alert-type="{{ alert_type }}" title="{{ title }}">
+
+**{{ alert.get('severity', 'ukjent') | capitalize }} alvorlighetsgrad**
 
 {%- if start_ts and end_ts %}
 
-#### Tidsperiode
+**Tidsperiode**
 
-🔵 {{ alert.start_formatted }} - økende fare
-
-🔵 {{ alert.end_formatted }} - minkende fare
-{% endif -%}
+<table role="presentation">
+  <tr>
+    <td align="right"><b>Start:&nbsp;</b></td><td><i>{{ alert.start_formatted }} - økende fare</i></td>
+  </tr>
+  <tr>
+    <td align="right"><b>Slutt:&nbsp;</b></td><td><i>{{ alert.end_formatted }} - minkende fare</i></td>
+  </tr>
+</table>
+{% endif %}
 {%- if alert.get('description') %}
 
-#### Beskrivelse
+**Beskrivelse**
 
 {{ alert.description }}
-{% endif -%}
+{% endif %}
 {%- if alert.get('instruction') %}
 
-#### Anbefalinger
+**Anbefalinger**
 
 {{ alert.instruction }}
-{% endif -%}
+{% endif %}
 {%- if alert.get('consequences') %}
 
-#### Konsekvenser
+**Konsekvenser**
 
 {{ alert.consequences }}
-
-{% endif -%}
+{% endif %}
 {%- if alert.get('area') %}
+
 **Område**: {{ alert.area }}
-
-{% endif -%}
+{% endif %}
 {%- if alert.get('certainty') or alert.get('severity') or alert.get('level_name') %}
-{%- if alert.get('certainty') %}**Sannsynlighet**: {{ alert.certainty }}{% endif -%}{%- if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif -%}{%- if alert.get('severity') or alert.get('level_name') %}**Alvorlighetsgrad**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif -%}
 
-{% endif -%}
----
-
+{%- if alert.get('certainty') %}**Sannsynlighet**: {{ alert.certainty }}{% endif -%}{%- if alert.get('certainty') and (alert.get('severity') or alert.get('level_name')) %} | {% endif -%}{%- if alert.get('severity') or alert.get('level_name') %}**Alvorlighetsgrad**: {{ alert.get('severity', alert.get('level_name', '')) }}{% endif %}
+{% endif %}
 {%- if show_map and alert.get('map_url') %}
-<img src="{{ alert.map_url }}" width="400">
 
-{% endif -%}
-{%- endfor -%}
-{%- endif -%}
+<img src="{{ alert.map_url }}" width="400">
+{% endif %}
+
+</ha-alert>
+
+{% endfor %}
+{% endif %}
 {%- else -%}
 Ingen aktive varsler
 {%- endif -%}
