@@ -188,4 +188,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automation examples for notifications
 - Lovelace card configuration examples
 
-[1.0.0]: https://github.com/jm-cook/varsom/releases/tag/v1.0.0
+[1.0.0]: https://github.com/DTekNO/varsom/releases/tag/v1.0.0

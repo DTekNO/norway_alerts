@@ -42,7 +42,7 @@ After importing the blueprint, add this to your `configuration.yaml`:
 ```yaml
 template:
   - use_blueprint:
-      path: jm-cook/cap_alert_markdown_sensor.yaml # relative to config/blueprints/template/
+      path: DTekNO/cap_alert_markdown_sensor.yaml # relative to config/blueprints/template/
       input:
         alert_sensor: sensor.weather_alerts_home
         show_icon: true

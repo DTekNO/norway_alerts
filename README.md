@@ -1,10 +1,11 @@
 # Norway Alerts - Home Assistant Integration
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/DTekNO/norway_alerts)
-[![Validate with HACS](https://github.com/DTekNO/norway_alerts/actions/workflows/validate.yaml/badge.svg)](https://github.com/DTekNO/norway_alerts/actions/workflows/validate.yaml)
-[![Hassfest](https://github.com/DTekNO/norway_alerts/actions/workflows/hassfest.yaml/badge.svg)](https://github.com/DTekNO/norway_alerts/actions/workflows/hassfest.yaml)
-[![GitHub Release](https://img.shields.io/github/release/DTekNO/norway_alerts.svg)](https://github.com/DTekNO/norway_alerts/releases)
-![Project Maintenance](https://img.shields.io/maintenance/yes/2026.svg)
+[![hacs][hacs-badge]][hacs-url]
+[![Validate with HACS][hacs-validation-badge]][hacs-validation-url]
+[![Hassfest][hassfest-badge]][hassfest-url]
+[![release][release-badge]][release-url]
+![Maintenance][maintenance-badge]
+![downloads][downloads-badge]
 
 A comprehensive Home Assistant custom integration that provides Norwegian weather and geohazard warnings from multiple official sources:
 - **Landslide, Flood, and Avalanche warnings** from NVE (Norwegian Water Resources and Energy Directorate)
@@ -830,7 +831,7 @@ The API uses the `Språknøkkel` parameter:
 
 ## Credits
 
-- **Author**: Jeremy Cook (@jm-cook)
+- **Author**: Jeremy Cook (@DTekNOdev)
 - **Data Sources**: 
   - NVE (Norwegian Water Resources and Energy Directorate) - https://www.varsom.no/
   - Met.no (Norwegian Meteorological Institute) - https://www.met.no/
@@ -890,3 +891,15 @@ The warning icons are licensed under CC BY 4.0 by Yr/NRK.
 **Last Updated**: January 2026  
 **Integration Version**: 2.0.0  
 **Minimum HA Version**: 2024.1.0
+
+<!-- Badge definitions -->
+[hacs-badge]: https://img.shields.io/badge/HACS-Custom-orange.svg
+[hacs-url]: https://github.com/DTekNO/norway_alerts
+[hacs-validation-badge]: https://github.com/DTekNO/norway_alerts/actions/workflows/validate.yaml/badge.svg
+[hacs-validation-url]: https://github.com/DTekNO/norway_alerts/actions/workflows/validate.yaml
+[hassfest-badge]: https://github.com/DTekNO/norway_alerts/actions/workflows/hassfest.yaml/badge.svg
+[hassfest-url]: https://github.com/DTekNO/norway_alerts/actions/workflows/hassfest.yaml
+[maintenance-badge]: https://img.shields.io/maintenance/yes/2026.svg
+[release-badge]: https://img.shields.io/github/release/DTekNO/norway_alerts.svg
+[release-url]: https://github.com/DTekNO/norway_alerts/releases
+[downloads-badge]: https://img.shields.io/github/downloads/DTekNO/norway_alerts/total
