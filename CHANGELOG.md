@@ -5,6 +5,26 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0] - 2026-02-12
+
+### Added
+- **Split Ongoing and Expected Alerts** - Separate formatted content attributes for better display control
+  - New `formatted_content_expected` attribute for alerts that haven't started yet
+  - Existing `formatted_content` now only shows ongoing alerts (already started)
+  - New `ongoing_alerts` count attribute (number of alerts already active)
+  - New `expected_alerts` count attribute (number of alerts starting in the future)
+  - State (`active_alerts`) remains the total count of all alerts
+  - Enables separate display cards for current vs. upcoming alerts
+  - Alert timing based on `starttime` field compared to current time
+  - Both attributes available for CAP-formatted sensors only
+
+### Technical Details
+- Alerts are split based on their `starttime` field
+- If `starttime > now`: classified as "expected" (future)
+- If `starttime <= now` or no starttime: classified as "ongoing" (current)
+- `formatted_summary` continues to show all alerts (combined) as before
+- Timezone-aware comparison handles both naive and aware datetimes
+
 ## [2.3.2]
 
 ### Changed

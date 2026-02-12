@@ -25,7 +25,7 @@ All warnings unified in a clean, modern Home Assistant interface with automatic 
 - **Flexible configuration** - One sensor per warning type for clean separation
 - **Multiple location types** - County-based (NVE) or coordinates-based (Met.no)
 - **Activity levels** - Green (1), Yellow (2), Orange (3), Red (4), Black (5 for avalanche)
-- **Pre-formatted attributes** - `formatted_content` (full details) and `formatted_summary` (icon-only compact view)
+- **Pre-formatted attributes** - `formatted_content` (ongoing alerts), `formatted_content_expected` (future alerts), and `formatted_summary` (icon-only compact view)
 - **CAP format support** - Optional conversion of NVE warnings to CAP standard for unified display
 - **Rich alert data** - Warning text, advice, consequences, affected areas, validity periods
 - **Direct links** - Each alert links to detailed maps and information
@@ -232,15 +232,18 @@ The sensor state represents the **highest activity level** from all active warni
 All sensors provide the following core attributes:
 
 ```yaml
-active_alerts: 2          # Number of active alerts
+active_alerts: 2          # Number of active alerts (state - total count)
+ongoing_alerts: 1         # Number of currently active alerts (already started)
+expected_alerts: 1        # Number of future alerts (starting later)
 highest_level: "yellow"   # Color name of highest severity
 highest_level_numeric: 2  # Numeric level (1-4 or 1-5 for avalanche)
-formatted_content: "..."  # Full alert details with descriptions (CAP format only)
-formatted_summary: "..."  # Compact icon-only view (CAP format only)
+formatted_content: "..."  # Ongoing alerts with full details (CAP format only)
+formatted_content_expected: "..."  # Expected alerts with full details (CAP format only)
+formatted_summary: "..."  # Compact icon-only view - all alerts (CAP format only)
 alerts: [...]             # Array of alert objects (see below)
 ```
 
-> **ℹ️ Database Optimization**: The `alerts`, `formatted_content`, `formatted_summary`, and `entity_picture` attributes are automatically excluded from recorder history to prevent database bloat. All data remains available in real-time.
+> **ℹ️ Database Optimization**: The `alerts`, `formatted_content`, `formatted_content_expected`, `formatted_summary`, and `entity_picture` attributes are automatically excluded from recorder history to prevent database bloat. All data remains available in real-time.
 
 #### Geohazard Warnings (Landslide, Flood, Avalanche)
 
@@ -360,11 +363,11 @@ To override with your own icons:
 
 ### Formatted Content Attributes
 
-The integration automatically generates two pre-formatted markdown attributes for easy display:
+The integration automatically generates pre-formatted markdown attributes for easy display:
 
-#### `formatted_content` - Full Details View
-Complete alert information with all details, ideal for dedicated alert cards:
-- Alert status (Expected/Ongoing/Ended) with visual indicators
+#### `formatted_content` - Ongoing Alerts (Full Details View)
+Shows **currently active alerts** that have already started:
+- Alert status (Ongoing/Ended) with visual indicators
 - Warning icons (if enabled)
 - Severity levels with color codes
 - Time periods with danger increase/decrease times
@@ -372,14 +375,26 @@ Complete alert information with all details, ideal for dedicated alert cards:
 - Affected areas and municipalities
 - Map images (if enabled)
 
-#### `formatted_summary` - Compact Icon View
-Minimalist view showing only alert icons in a horizontal row - perfect for dashboard headers or compact displays:
-- Warning icons only (color-coded by severity)
-- Horizontally arranged
+#### `formatted_content_expected` - Expected Alerts (Full Details View)
+Shows **upcoming alerts** that haven't started yet (starttime is in the future):
+- Same detailed format as `formatted_content`
+- Shows "Expected" status
+- Allows you to create separate cards for future vs. current alerts
+- Enables better alert awareness before events begin
+
+#### `formatted_summary` - Compact Icon View (All Alerts)
+Minimalist view showing **all alerts** (both ongoing and expected) as icons only:
+- Warning icons in a horizontal row
+- Perfect for dashboard headers or compact displays
 - No text, just visual indicators
 - Useful for at-a-glance status
 
-> **Note**: Both attributes are only available for **CAP-formatted alerts**:
+**Alert Counts:**
+- `active_alerts` (sensor state): Total count of all alerts (ongoing + expected)
+- `ongoing_alerts` attribute: Count of currently active alerts
+- `expected_alerts` attribute: Count of future alerts
+
+> **Note**: All formatted attributes are only available for **CAP-formatted alerts**:
 > - Weather alerts (Met.no) - always in CAP format
 > - NVE warnings (landslide, flood, avalanche) - only when "Enable CAP format" is checked during configuration
 > 
@@ -397,11 +412,33 @@ These options affect `formatted_content` but not `formatted_summary` (which alwa
 
 ### Usage Examples
 
-**Full details view:**
+**Ongoing alerts (currently active):**
 ```yaml
 type: markdown
 content: >
   {{ state_attr('sensor.norway_alerts_landslide_vestland', 'formatted_content') }}
+```
+
+**Expected alerts (starting in the future):**
+```yaml
+type: markdown
+content: >
+  {{ state_attr('sensor.norway_alerts_landslide_vestland', 'formatted_content_expected') }}
+```
+
+**Combined view with headers:**
+```yaml
+type: markdown
+content: >
+  {% if state_attr('sensor.norway_alerts_landslide_vestland', 'ongoing_alerts') > 0 %}
+  ## 🚨 Active Alerts
+  {{ state_attr('sensor.norway_alerts_landslide_vestland', 'formatted_content') }}
+  {% endif %}
+  
+  {% if state_attr('sensor.norway_alerts_landslide_vestland', 'expected_alerts') > 0 %}
+  ## ⏰ Upcoming Alerts
+  {{ state_attr('sensor.norway_alerts_landslide_vestland', 'formatted_content_expected') }}
+  {% endif %}
 ```
 
 ![Norwegian Forest Fire Alert](images/forestFire_example_no.png)
@@ -412,7 +449,7 @@ content: >
 
 *English language alert example - same data, different language*
 
-**Compact icons only:**
+**Compact icons only (all alerts):**
 ```yaml
 type: markdown
 content: >
