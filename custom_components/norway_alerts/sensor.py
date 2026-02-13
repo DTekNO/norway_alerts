@@ -976,13 +976,17 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                         enriched["starttime_timestamp"] = start_dt.timestamp()
                         enriched["endtime_timestamp"] = end_dt.timestamp()
                         
+                        # Convert UTC times to local timezone for display
+                        start_dt_local = start_dt.astimezone()
+                        end_dt_local = end_dt.astimezone()
+                        
                         # Format dates based on language
                         if self.coordinator.lang == "no":
-                            enriched["start_formatted"] = self._format_datetime_norwegian(start_dt)
-                            enriched["end_formatted"] = self._format_datetime_norwegian(end_dt)
+                            enriched["start_formatted"] = self._format_datetime_norwegian(start_dt_local)
+                            enriched["end_formatted"] = self._format_datetime_norwegian(end_dt_local)
                         else:
-                            enriched["start_formatted"] = start_dt.strftime("%A, %d %B kl. %H:%M")
-                            enriched["end_formatted"] = end_dt.strftime("%A, %d %B kl. %H:%M")
+                            enriched["start_formatted"] = start_dt_local.strftime("%A, %d %B kl. %H:%M")
+                            enriched["end_formatted"] = end_dt_local.strftime("%A, %d %B kl. %H:%M")
                     except (ValueError, AttributeError) as err:
                         _LOGGER.debug("Failed to parse timestamps for alert: %s", err)
                         pass
