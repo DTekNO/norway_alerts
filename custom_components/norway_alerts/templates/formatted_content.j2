@@ -28,29 +28,24 @@
 
 {#- Icon alert with severity-based color -#}
 <ha-alert alert-type="{{ alert_type }}">
-{%- if show_icon and alert.get('entity_picture') %}
-<img src="{{ alert.entity_picture }}" width="64" height="64">
-{%- endif %}
-</ha-alert>
-
-{#- Main alert with all details -#}
-<ha-alert alert-type="{{ alert_type }}" title="{{ title }}">
-
-**{{ alert.get('severity', 'unknown') | capitalize }} severity**
-
-{%- if start_ts and end_ts %}
-
-**Time period**
 
 <table role="presentation">
-  <tr>
-    <td align="right"><b>Start:&nbsp;</b></td><td><i>{{ alert.start_formatted }} - increasing danger</i></td>
-  </tr>
-  <tr>
-    <td align="right"><b>End:&nbsp;</b></td><td><i>{{ alert.end_formatted }} - decreasing danger</i></td>
-  </tr>
+<tr>
+<td><b>{{ title }}</b></td>
+{%- if show_icon and alert.get('entity_picture') %}
+<td rowspan="2" width="40"><img src="{{ alert.entity_picture }}" width="40" height="40"></td>
+{%- endif %}
+</tr>
+<tr>
+<td>{{ alert.get('severity', 'unknown') | capitalize }} severity</td>
+</tr>
 </table>
-{% endif %}
+
+</ha-alert>
+
+{# Main alert with all details #}
+<ha-alert alert-type="{{ alert_type }}" >
+
 {%- if alert.get('description') %}
 
 **Description**
@@ -80,6 +75,20 @@
 {%- if show_map and alert.get('map_url') %}
 
 <img src="{{ alert.map_url }}" width="400">
+{% endif %}
+
+{%- if start_ts and end_ts %}
+
+**Time period**
+
+<table role="presentation">
+  <tr>
+    <td align="right"><b>Start:&nbsp;</b></td><td><i>{{ alert.start_formatted }} - increasing danger</i></td>
+  </tr>
+  <tr>
+    <td align="right"><b>End:&nbsp;</b></td><td><i>{{ alert.end_formatted }} - decreasing danger</i></td>
+  </tr>
+</table>
 {% endif %}
 
 </ha-alert>
