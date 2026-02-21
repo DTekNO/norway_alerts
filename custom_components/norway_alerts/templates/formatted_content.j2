@@ -26,7 +26,7 @@
 {%- if loop.index0 > 0 %}<br>
 {% endif %}
 
-{#- Icon alert with severity-based color -#}
+{# Icon alert with severity-based color #}
 <ha-alert alert-type="{{ alert_type }}">
 
 <table role="presentation">
@@ -44,11 +44,9 @@
 </ha-alert>
 
 {# Main alert with all details #}
-<ha-alert alert-type="{{ alert_type }}" >
+<ha-alert alert-type="{{ alert_type }}" title="Description">
 
-{%- if alert.get('description') %}
-
-**Description**
+{%- if alert.get('description') %} 
 
 {{ alert.description }}
 {% endif %}
