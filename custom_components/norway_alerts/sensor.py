@@ -671,7 +671,7 @@ class NorwayAlertsCoordinator(DataUpdateCoordinator):
 class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Norway Alerts sensor with all alerts in attributes."""
 
-    _unrecorded_attributes = frozenset({"formatted_content", "formatted_content_expected", "formatted_summary", "alerts", "entity_picture"})
+    _unrecorded_attributes = frozenset({"formatted_content", "formatted_summary", "alerts", "entity_picture"})
 
     def __init__(self, coordinator: NorwayAlertsCoordinator, entry_id: str, county_name: str, warning_type: str, municipality_filter: str, template_content: str | None, is_main: bool = True):
         """Initialize the sensor."""
@@ -1195,50 +1195,25 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         # Convert dict back to list
         alerts_list = list(alerts_dict.values())
         
-        # Sort by level (highest first), then by starttime
-        alerts_list.sort(key=lambda x: (x["level"], x.get("starttime", "")), reverse=True)
-        
-        # Split alerts into ongoing and expected based on starttime
-        ongoing_alerts = []
-        expected_alerts = []
-        now = datetime.now()
-        
-        for alert in alerts_list:
+        # Sort by starttime (latest/furthest in future first), then by level (highest first)
+        # Alerts without starttime will be sorted last
+        def sort_key(alert):
             starttime_str = alert.get("starttime", "")
             if starttime_str:
-                try:
-                    # Parse the starttime
-                    start_dt = datetime.fromisoformat(starttime_str.replace("Z", "+00:00"))
-                    # Make start_dt timezone-aware if now is timezone-aware, or vice versa
-                    if start_dt.tzinfo is not None and now.tzinfo is None:
-                        now = now.astimezone()
-                    elif start_dt.tzinfo is None and now.tzinfo is not None:
-                        start_dt = start_dt.replace(tzinfo=now.tzinfo)
-                    
-                    # Compare times
-                    if start_dt > now:
-                        expected_alerts.append(alert)
-                    else:
-                        ongoing_alerts.append(alert)
-                except (ValueError, AttributeError) as err:
-                    _LOGGER.debug("Failed to parse starttime for alert, treating as ongoing: %s", err)
-                    ongoing_alerts.append(alert)
+                return (starttime_str, -alert["level"])  # Negative level for descending order
             else:
-                # No starttime, treat as ongoing
-                ongoing_alerts.append(alert)
+                return ("", -alert["level"])  # Empty string sorts first, so this effectively puts them last
         
-        _LOGGER.debug("Split %d alerts into %d ongoing and %d expected", 
-                     len(alerts_list), len(ongoing_alerts), len(expected_alerts))
+        alerts_list.sort(key=sort_key, reverse=True)
+        
+        _LOGGER.debug("Sorted %d alerts by start date (latest first)", len(alerts_list))
         
         result = {
             "active_alerts": len(alerts_list),
-            "ongoing_alerts": len(ongoing_alerts),
-            "expected_alerts": len(expected_alerts),
             "highest_level": ACTIVITY_LEVEL_NAMES.get(str(max_level), "green"),
             "highest_level_numeric": max_level,
             "alerts": alerts_list,
-            "formatted_content": self._generate_formatted_content(ongoing_alerts, compact=False),
-            "formatted_content_expected": self._generate_formatted_content(expected_alerts, compact=False),
+            "formatted_content": self._generate_formatted_content(alerts_list, compact=False),
             "formatted_summary": self._generate_formatted_content(alerts_list, compact=True),
         }
         

@@ -5,6 +5,22 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+- **🔄 Unified Alert Display** - Merged ongoing and expected alerts back into single attribute
+  - All alerts now display together in `formatted_content` (both current and future)
+  - Alerts sorted by start date (latest/furthest in future first), then by severity
+  - Simplified display - no need for separate cards for ongoing vs. expected
+
+### Breaking Changes
+- **Removed Attributes** - The following attributes have been removed:
+  - `formatted_content_expected` - merged into `formatted_content`
+  - `ongoing_alerts` - count removed (use `active_alerts` for total)
+  - `expected_alerts` - count removed (use `active_alerts` for total)
+- **Migration**: If you were displaying `formatted_content_expected` in a separate card, update your card to use `formatted_content` which now includes all alerts
+  - If you need separate ongoing/expected displays, see the documentation section on creating custom Jinja2 templates for markdown cards
+
 ## [2.4.0] - 2026-02-12
 
 ### Added
