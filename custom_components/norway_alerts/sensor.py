@@ -928,6 +928,51 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
         _LOGGER.info("Filtered to %d alerts matching '%s'", len(filtered), self._municipality_filter)
         return filtered
 
+    def _deduplicate_alerts(self, alerts):
+        """Deduplicate alerts by master_id/Id.
+        
+        The NVE API returns separate entries for each municipality affected by the
+        same warning. This method deduplicates by master_id to get unique alerts,
+        merging municipality lists from duplicate entries.
+        
+        Args:
+            alerts: List of alerts to deduplicate
+            
+        Returns:
+            List of unique alerts with merged municipality lists
+        """
+        alerts_dict = {}  # Use dict with master_id as key to deduplicate
+        
+        for alert in alerts:
+            # NVE API may have multiple ID fields
+            forecast_id = alert.get("Id", "")
+            master_id = alert.get("MasterId", "")
+            
+            # Use MasterId if available, otherwise fall back to Id
+            # MasterId appears to be the correct ID for Varsom.no URLs
+            url_id = master_id if master_id else forecast_id
+            
+            # Check if we already have an alert with this master_id
+            if url_id in alerts_dict:
+                # Merge municipality lists (avoid duplicates)
+                existing_list = alerts_dict[url_id].get("MunicipalityList", [])
+                new_list = alert.get("MunicipalityList", [])
+                
+                # Create a set of existing municipality names for duplicate checking
+                existing_names = {m.get("Name", "") for m in existing_list}
+                
+                # Add new municipalities that aren't already present
+                for muni in new_list:
+                    if muni.get("Name", "") not in existing_names:
+                        existing_list.append(muni)
+                
+                _LOGGER.debug("Merged duplicate alert %s", url_id)
+            else:
+                # First occurrence - store the alert
+                alerts_dict[url_id] = alert
+        
+        return list(alerts_dict.values())
+
     def _generate_formatted_content(self, alerts, compact=False):
         """Generate markdown-formatted content for display using cached Jinja2 template.
         
@@ -1054,7 +1099,10 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             if alert.get("ActivityLevel", "1") not in ("0", "1")
         ]
         
-        return len(active_alerts)
+        # Deduplicate alerts by master_id - NVE API returns one entry per municipality
+        deduplicated_alerts = self._deduplicate_alerts(active_alerts)
+        
+        return len(deduplicated_alerts)
 
     @property
     def extra_state_attributes(self):
@@ -1093,16 +1141,19 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
             if alert.get("ActivityLevel", "1") not in ("0", "1")
         ]
         
+        # Deduplicate alerts by master_id - NVE API returns one entry per municipality
+        deduplicated_alerts = self._deduplicate_alerts(active_alerts)
+        
         # Determine highest level
-        if active_alerts:
-            max_level = max(int(alert.get("ActivityLevel", "1")) for alert in active_alerts)
+        if deduplicated_alerts:
+            max_level = max(int(alert.get("ActivityLevel", "1")) for alert in deduplicated_alerts)
         else:
             max_level = 1
         
-        # Build alerts array - deduplicate by master_id to avoid showing same warning multiple times
-        alerts_dict = {}  # Use dict with master_id as key to deduplicate
+        # Build alerts array from deduplicated alerts
+        alerts_list = []
         
-        for alert in active_alerts:
+        for alert in deduplicated_alerts:
             # NVE API may have multiple ID fields - try to find the correct one for Varsom.no URL
             forecast_id = alert.get("Id", "")
             master_id = alert.get("MasterId", "")
@@ -1137,63 +1188,52 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 else:
                     varsom_url = f"https://www.varsom.no/flom-og-jordskred/varsling/varselid/{url_id}" if url_id else None
             
-            # Get municipality list
+            # Get municipality list (already merged by _deduplicate_alerts)
             municipalities = [m.get("Name", "") for m in alert.get("MunicipalityList", [])]
             
-            # Check if we already have an alert with this master_id
-            if url_id in alerts_dict:
-                # Merge municipality lists (avoid duplicates)
-                existing_munis = set(alerts_dict[url_id]["municipalities"])
-                existing_munis.update(municipalities)
-                alerts_dict[url_id]["municipalities"] = sorted(list(existing_munis))
-                _LOGGER.debug("Merged duplicate alert %s, municipalities now: %s", url_id, alerts_dict[url_id]["municipalities"])
+            # Generate individual icon for this alert
+            level_color = ACTIVITY_LEVEL_NAMES.get(activity_level, "green")
+            if warning_type and level_color != "green":
+                icon_key = f"{warning_type}-{level_color}"
+                # Try to get icon, fall back to generic if not found
+                individual_icon = ICON_DATA_URLS.get(icon_key)
+                if not individual_icon:
+                    generic_key = f"generic-{level_color}"
+                    individual_icon = ICON_DATA_URLS.get(generic_key)
+                    _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
             else:
-                # Generate individual icon for this alert
-                level_color = ACTIVITY_LEVEL_NAMES.get(activity_level, "green")
-                if warning_type and level_color != "green":
-                    icon_key = f"{warning_type}-{level_color}"
-                    # Try to get icon, fall back to generic if not found
-                    individual_icon = ICON_DATA_URLS.get(icon_key)
-                    if not individual_icon:
-                        generic_key = f"generic-{level_color}"
-                        individual_icon = ICON_DATA_URLS.get(generic_key)
-                        _LOGGER.debug("Icon not found for %s, using %s", icon_key, generic_key)
+                individual_icon = None
+            
+            # Detect MetAlerts by presence of CAP-specific 'event' field
+            is_metalert = "event" in alert and "awareness_level" in alert
+            
+            # If CAP format is enabled and this is an NVE warning, convert it
+            if self.coordinator.cap_format and not is_metalert:
+                # Convert NVE format to CAP format for unified display
+                alert["entity_picture"] = individual_icon  # Add icon before conversion
+                alert_dict = convert_nve_to_cap(alert, warning_type, self.coordinator.lang)
+            else:
+                # Use native format (either MetAlerts CAP or NVE native)
+                # Create base dict with common fields
+                alert_dict = {
+                    "id": forecast_id,
+                    "level": int(activity_level),
+                    "level_name": ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown"),
+                    "danger_type": alert.get("DangerTypeName", ""),
+                    "warning_type": alert.get("_warning_type", "unknown"),
+                    "main_text": alert.get("MainText", ""),
+                    "entity_picture": individual_icon,
+                }
+                
+                # Add warning-type-specific attributes using helper methods
+                if is_metalert:
+                    self._add_metalert_attributes(alert_dict, alert)
+                elif warning_type == "avalanche":
+                    self._add_avalanche_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
                 else:
-                    individual_icon = None
-                
-                # Detect MetAlerts by presence of CAP-specific 'event' field
-                is_metalert = "event" in alert and "awareness_level" in alert
-                
-                # If CAP format is enabled and this is an NVE warning, convert it
-                if self.coordinator.cap_format and not is_metalert:
-                    # Convert NVE format to CAP format for unified display
-                    alert["entity_picture"] = individual_icon  # Add icon before conversion
-                    alert_dict = convert_nve_to_cap(alert, warning_type, self.coordinator.lang)
-                else:
-                    # Use native format (either MetAlerts CAP or NVE native)
-                    # Create base dict with common fields
-                    alert_dict = {
-                        "id": forecast_id,
-                        "level": int(activity_level),
-                        "level_name": ACTIVITY_LEVEL_NAMES.get(activity_level, "unknown"),
-                        "danger_type": alert.get("DangerTypeName", ""),
-                        "warning_type": alert.get("_warning_type", "unknown"),
-                        "main_text": alert.get("MainText", ""),
-                        "entity_picture": individual_icon,
-                    }
-                    
-                    # Add warning-type-specific attributes using helper methods
-                    if is_metalert:
-                        self._add_metalert_attributes(alert_dict, alert)
-                    elif warning_type == "avalanche":
-                        self._add_avalanche_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
-                    else:
-                        self._add_nve_generic_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
-                
-                alerts_dict[url_id] = alert_dict
-        
-        # Convert dict back to list
-        alerts_list = list(alerts_dict.values())
+                    self._add_nve_generic_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
+            
+            alerts_list.append(alert_dict)
         
         # Sort by starttime (latest/furthest in future first), then by level (highest first)
         # Alerts without starttime will be sorted last

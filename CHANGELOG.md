@@ -5,7 +5,16 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.4.1] 2026-02-24
+## [2.4.3] - 2026-02-27
+
+### Fixed
+- **🐛 Alert Count Accuracy** - Fixed incorrect sensor state for flood, landslide, and avalanche alerts
+  - Sensor state now correctly shows count of unique alerts instead of total municipality entries
+  - NVE API returns one entry per municipality for each warning, causing inflated counts (e.g., 43 instead of 1)
+  - Both sensor state (`native_value`) and attributes (`extra_state_attributes`) now use unified deduplication
+  - Municipality lists are properly merged when deduplicating alerts
+
+## [2.4.2] - 2026-02-24
 
 ### Changed
 - **🔄 Unified Alert Display** - Merged ongoing and expected alerts back into single attribute
@@ -20,6 +29,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - `expected_alerts` - count removed (use `active_alerts` for total)
 - **Migration**: If you were displaying `formatted_content_expected` in a separate card, update your card to use `formatted_content` which now includes all alerts
   - If you need separate ongoing/expected displays, see the documentation section on creating custom Jinja2 templates for markdown cards
+
+## [2.4.1] - 2026-02-13
+
+This release brings some minor improvements to the templated markdown texts, compatible with Home Assistants markdown card. This means the user can make clearer presentations, for example in wall panels and tablets.
+
+The current display looks like the screenshot below:
+
+<img width="606" height="688" alt="image" src="https://github.com/user-attachments/assets/edfa40b1-c4ee-470c-a58b-98b6299efd2e" />
 
 ## [2.4.0] - 2026-02-12
 
