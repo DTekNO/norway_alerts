@@ -2,78 +2,86 @@ name: Update and release
 
 on:
   release:
-    types: [published]
+    types: [published, prereleased]
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  update-manifest:
+  update-manifest-and-upload:
     runs-on: ubuntu-latest
-    outputs:
-      integration_domain: ${{ steps.find_domain.outputs.domain }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
 
-      - name: Get release version
-        id: get_version
+    steps:
+      - name: Checkout default branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Get release metadata
+        id: release_meta
         run: |
-          # Extract version from tag and remove leading 'v' if present
-          TAG_VERSION="${GITHUB_REF#refs/tags/}"
+          TAG_VERSION="${{ github.event.release.tag_name }}"
           VERSION="${TAG_VERSION#v}"
-          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$TAG_VERSION" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "Tag: $TAG_VERSION -> Version: $VERSION"
 
       - name: Find integration domain
         id: find_domain
         run: |
-          # Find the first manifest.json in custom_components and extract the domain
           MANIFEST=$(find custom_components -name "manifest.json" -type f | head -n 1)
+          if [ -z "$MANIFEST" ]; then
+            echo "No manifest.json found under custom_components"
+            exit 1
+          fi
           DOMAIN=$(jq -r '.domain' "$MANIFEST")
-          echo "domain=$DOMAIN" >> $GITHUB_OUTPUT
+          if [ -z "$DOMAIN" ] || [ "$DOMAIN" = "null" ]; then
+            echo "Could not determine integration domain from $MANIFEST"
+            exit 1
+          fi
+          echo "domain=$DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "manifest=$MANIFEST" >> "$GITHUB_OUTPUT"
           echo "Found integration domain: $DOMAIN (from $MANIFEST)"
 
       - name: Update version in manifest.json
         run: |
-          DOMAIN="${{ steps.find_domain.outputs.domain }}"
-          cd ${{ github.workspace }}/custom_components/$DOMAIN
-          jq '.version = "${{ steps.get_version.outputs.VERSION }}"' manifest.json > manifest.json.tmp
-          mv manifest.json.tmp manifest.json
-          echo "Updated manifest.json for $DOMAIN to version ${{ steps.get_version.outputs.VERSION }}"
+          MANIFEST="${{ steps.find_domain.outputs.manifest }}"
+          VERSION="${{ steps.release_meta.outputs.version }}"
+          tmpfile=$(mktemp)
+          jq --arg version "$VERSION" '.version = $version' "$MANIFEST" > "$tmpfile"
+          mv "$tmpfile" "$MANIFEST"
+          echo "Updated $MANIFEST to version $VERSION"
 
-      - name: Commit the updated manifest and push changes
+      - name: Commit updated manifest
         run: |
-          DOMAIN="${{ steps.find_domain.outputs.domain }}"
-          git config --global user.name "github-actions"
-          git config --global user.email "github-actions@github.com"
-          git add custom_components/$DOMAIN/manifest.json
+          MANIFEST="${{ steps.find_domain.outputs.manifest }}"
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "$MANIFEST"
           if ! git diff --cached --quiet; then
-            git commit -m "Update manifest version to ${{ github.ref_name }}"
+            git commit -m "Update manifest version to ${{ steps.release_meta.outputs.version }}"
             git push origin HEAD:main
+          else
+            echo "No manifest changes to commit"
           fi
 
-          # Move the tag to this commit and force-push
-          git tag -f ${{ github.ref_name }}
-          git push origin ${{ github.ref_name }} --force
-
-  release:
-    needs: update-manifest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          ref: main  # Force checkout of main branch to get the updated manifest
-      
-      - name: 📦 Create integration ZIP
+      - name: Refresh workspace to latest main
         run: |
-          DOMAIN="${{ needs.update-manifest.outputs.integration_domain }}"
-          cd ${{ github.workspace }}/custom_components/$DOMAIN
-          zip $DOMAIN.zip -r ./
+          git fetch origin main
+          git checkout origin/main
+
+      - name: Create integration ZIP
+        run: |
+          DOMAIN="${{ steps.find_domain.outputs.domain }}"
+          cp LICENSE "custom_components/$DOMAIN/"
+          cd "custom_components/$DOMAIN"
+          zip -r "$DOMAIN.zip" ./
           echo "Created $DOMAIN.zip"
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          files: ${{ github.workspace }}/custom_components/${{ needs.update-manifest.outputs.integration_domain }}/${{ needs.update-manifest.outputs.integration_domain }}.zip
+          tag_name: ${{ steps.release_meta.outputs.tag }}
+          files: custom_components/${{ steps.find_domain.outputs.domain }}/${{ steps.find_domain.outputs.domain }}.zip
