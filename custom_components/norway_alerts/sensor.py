@@ -1233,8 +1233,9 @@ class NorwayAlertsSensor(CoordinatorEntity, SensorEntity):
                 else:
                     self._add_nve_generic_attributes(alert_dict, alert, master_id, municipalities, varsom_url)
             
+            alert_dict["formatted_content"] = self._generate_formatted_content([alert_dict], compact=False)
             alerts_list.append(alert_dict)
-        
+
         # Sort by starttime (latest/furthest in future first), then by level (highest first)
         # Alerts without starttime will be sorted last
         def sort_key(alert):
