@@ -237,10 +237,10 @@ ongoing_alerts: 1         # Number of currently active alerts (already started)
 expected_alerts: 1        # Number of future alerts (starting later)
 highest_level: "yellow"   # Color name of highest severity
 highest_level_numeric: 2  # Numeric level (1-4 or 1-5 for avalanche)
-formatted_content: "..."  # Ongoing alerts with full details (CAP format only)
-formatted_content_expected: "..."  # Expected alerts with full details (CAP format only)
+formatted_content: "..."  # All active alerts with full details (CAP format only)
 formatted_summary: "..."  # Compact icon-only view - all alerts (CAP format only)
-alerts: [...]             # Array of alert objects (see below)
+alerts: [...]             # Array of alert objects — each item includes a formatted_content
+                          # field scoped to that single alert (for use with ha-alert-card)
 ```
 
 > **ℹ️ Database Optimization**: The `alerts`, `formatted_content`, `formatted_content_expected`, `formatted_summary`, and `entity_picture` attributes are automatically excluded from recorder history to prevent database bloat. All data remains available in real-time.
@@ -360,6 +360,36 @@ To override with your own icons:
 ---
 
 ## Display Content
+
+### ha-alert-card (Recommended Interactive Display)
+
+[ha-alert-card](https://github.com/DTekNO/ha-alert-card) is the recommended companion card for displaying alerts interactively — with dismiss, severity sorting, paging, and per-alert expansion showing the full alert detail (description, instructions, consequences, map, time period).
+
+```yaml
+type: custom:ha-alert-card
+title: Weather Alerts
+sources:
+  - entity: sensor.norway_alerts_metalerts_vestland
+    image_attribute: entity_picture   # Shows per-alert warning icon in each row
+```
+
+Norway Alerts uses CAP field names natively, so no field mapping is required. When an alert is expanded, the card renders the per-alert `formatted_content` from the `alerts` array — scoped to that single alert.
+
+Multiple sensors can be combined in one card:
+
+```yaml
+type: custom:ha-alert-card
+title: Norway Alerts
+sources:
+  - entity: sensor.norway_alerts_metalerts_vestland
+    name: Vestland
+    image_attribute: entity_picture
+  - entity: sensor.norway_alerts_metalerts_rogaland
+    name: Rogaland
+    image_attribute: entity_picture
+```
+
+> The entity-level `formatted_content`, `formatted_summary`, and `alerts` attributes are unchanged and continue to work in markdown cards as before.
 
 ### Formatted Content Attributes
 

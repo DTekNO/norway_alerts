@@ -5,6 +5,15 @@ All notable changes to the Norway Alerts integration will be documented in this 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.4] - 2026-07-08
+
+### Added
+- **Per-alert `formatted_content`**: Each alert in the `alerts` attribute array now carries its own `formatted_content` field, generated from the same CAP template as the entity-level attribute but scoped to that single alert. When used with [ha-alert-card](https://github.com/DTekNO/ha-alert-card), expanding an individual alert shows only that alert's detail (description, instructions, consequences, map, time period) rather than all alerts on the entity.
+
+### Compatibility
+- Entity-level `formatted_content` and `formatted_summary` are completely unchanged — existing markdown cards and automations continue to work without modification
+- Works with ha-alert-card `image_attribute: entity_picture` to show the per-alert severity icon in each card row
+
 ## [2.4.3] - 2026-02-27
 
 ### Fixed
